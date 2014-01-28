@@ -1,0 +1,79 @@
+/* reset button and input width, this includes #dda-export-btn */
+input, button {
+    width: auto;
+}
+
+.clearfix:before, .clearfix:after {
+    content: " ";
+    display: table;
+}
+.clearfix:after {
+    clear: both;
+}
+
+#dda-template-body input {
+    width: auto !important;
+}
+
+.ui-widget button, .ui-widget-header button {
+    margin: auto auto;
+}
+
+#dda-template-table{
+    width: 100%;
+}
+
+#dda-template-body > .alpaca-fieldset > legend.alpaca-fieldset-legend {
+    display: none !important;
+}
+#dda-template-body > .alpaca-fieldset {
+    border: 0px none !important;
+}
+#dda-template-body .alpaca-fieldset-legend {
+    color: #444;
+    background-image: linear-gradient(#E5E5E5, #DBDBDB);
+    background-size: 100% auto;
+    border: 1px solid #CCCCCC;
+    border-radius: 3px;
+    padding: 5px 10px 4px;
+    text-shadow: 0 1px 0 #F5F5F5;
+}
+
+#dda-template-body .ui-button  {
+    background-image: linear-gradient(#fff, #DBDBDB);
+}
+#dda-template-body .ui-button.ui-state-active  {
+    background-image: linear-gradient(#E5E5E5, #DBDBDB);
+}
+#dda-template-body .ui-button:hover {
+    color: #000;
+}
+
+.dda-add-element {
+    cursor: pointer;
+    background-image: linear-gradient(#E5E5E5, #DBDBDB);
+    background-size: 100% auto;
+    border: 1px solid #CCCCCC;
+    padding: 5px 10px;
+    text-shadow: 0 1px 0 #F5F5F5;
+}
+.dda-add-element h3 {
+    padding: 0;
+    border: 0 none;
+}
+.ui-draggable-dragging {
+    z-index: 9999;
+}
+
+.ui-helper-hidden-accessible {
+    position: absolute !important;
+}
+
+.dda-array-toolbar-container-right {
+    margin-top: 2px;
+    float:right;
+}
+
+.dda-ref-toggles > .ui-button {
+    margin-left: 0px !important;
+}
