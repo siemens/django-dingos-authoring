@@ -1,0 +1,62 @@
+{% extends "dingos_authoring/base.html" %}
+
+
+{% block content %}
+<div class="l-2cr-fluid l-d-12">
+    <div class="c-1">
+        <div class="grp-module">
+            <h2>Template Selection</h2>
+            <div class="grp-row">
+                <form action="{% url 'dingos_authoring.index' %}" method="get">
+                    {% csrf_token %}
+                    <div class="grp-row">
+                        <table id="dda-template-table">
+                            <tbody><tr>
+                                <th><label for="template_selector">Template:</label></th>
+                                <td>
+                                    <select id="template_selector" name="template">
+                                        {% for t in available_templates %}
+                                        {% ifequal t.id selected_template.id %}
+                                        <option value="{{t.id}}" selected="selected">{{t.title}}</option>
+                                        {% else %}
+                                        <option value="{{t.id}}">{{t.title}}</option>
+                                        {% endifequal %}
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                            </tr></tbody>
+                        </table>
+                    </div>
+                    <div class="grp-row">
+                        <button id="dda-export-btn" class="grp-button" background: gray;" disabled>Export This Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="grp-module">
+            <h2>Additional Elements</h2>
+            <div class="grp-row">
+                <div class="dda-add-element">
+                    <h3>Test Item</h3>
+                    <p>Test item description</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="c-2">
+        <div class="grp-module">
+            <h2 id="dda-template-head"></h2>
+            <div id="dda-template-body" class="grp-row">
+                <p style="font-style: italic;">Currently None</p>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="application/javascript">
+    $(function() {
+        var tmpl = {{ json_template|safe }};
+        if(tmpl)
+            $.dingos_authoring.init(tmpl);
+    });
+</script>
+{% endblock content %}
