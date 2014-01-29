@@ -284,6 +284,7 @@
 		    'elem': _tmp,
 		    'field': _tmp_a.field,
 		    'fieldContainer': _tmp_a.fieldContainer,
+		    'fieldContainerJQ': $(_tmp_a.fieldContainer),
 		    'children': [],
 		    'childrenById': {},
 		    'childrenByPropertyId': {},
@@ -303,7 +304,11 @@
 	    var ns = _this.states[id];
 
 	    itm.field = ns.field; 
-	    itm.fieldContainer.replaceWith($(ns.fieldContainer));
+	    
+	    // Remove the old elements (in the fieldContainer) from the DOM and keep attached events
+	    // detachAndReplaceWith is a custom jQuery plugin which is pretty much the same as the 
+	    // source of stock-replaceWith but with detach() instead of remove()
+	    var old_fieldContainerJQ = itm.fieldContainer.detachAndReplaceWith(ns.fieldContainerJQ);
 	    itm.fieldContainer = ns.fieldContainer;	    
 	    itm.children = ns.children;
 	    itm.childrenById = ns.childrenById;
@@ -311,6 +316,7 @@
 
 	    ns.field = old_field;
 	    ns.fieldContainer = old_fieldContainer;
+	    ns.fieldContainerJQ = old_fieldContainerJQ;
 	    ns.children = old_children;
 	    ns.childrenById = old_childrenById;
 	    ns.childrenByPropertyId = old_childrenByPropertyId;
@@ -320,6 +326,7 @@
 		_this._bind_ac(itm.fieldContainer.find('input'), id);
 	    }
 
+	    _this.renderValidationState(true);
 	    _this.updateChildrenPathAndName(_this);
 	},
     });
