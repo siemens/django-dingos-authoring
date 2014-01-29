@@ -39,9 +39,9 @@
             this.ref_type='dns';
 
             // Define our DNS schema; This just renders an input field
-            this.schema.items = {
-                "title": "Domain Name Indicator",
-            }
+            //this.schema.items = {
+            //    "title": "Domain Name Indicator",
+            //}
 
         },
 

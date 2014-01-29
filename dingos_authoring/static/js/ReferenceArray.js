@@ -117,7 +117,7 @@
             if (!this.options.readonly) {
                 var id = containerElem.attr('alpaca-id');
                 var fieldControl = this.childrenById[id];
-                var itemToolbarTemplateDescriptor = this.view.getTemplateDescriptor("arrayItemToolbar");
+                var itemToolbarTemplateDescriptor = this.view.getTemplateDescriptor("arrayItemToolbarTgl");
                 if (itemToolbarTemplateDescriptor) {
 
                     // Base buttons : add & remove
@@ -210,6 +210,19 @@
         },
 	_bind_ac: function(el, id){
 	    var _this = this;
+
+	    //TODO: on type "any" we should render a category for results. http://jqueryui.com/autocomplete/#categories
+
+	    var ac_trigger = function(event, ui){
+		if(ui.item){
+		    $('#dda-input-ref-span_'+id).html(ui.item.label);
+		}else{
+		    $('#dda-input-ref-span_'+id).html('');
+		    $(this).val('');
+		}
+		_this.renderValidationState(true);
+	    }
+
 	    /* bind the autocomplete to el */
 	    el.autocomplete({
 		source: function( request, response ) {
@@ -233,10 +246,10 @@
 		},
 		autoFocus: true,
 		select: function(event, ui){
-		    if(ui.item){
-			$('#dda-input-ref-span_'+id).html(ui.item.label);
-		    }
-
+		    ac_trigger.call(this, event, ui);
+		},
+		change: function(event, ui){
+		    ac_trigger.call(this, event, ui);
 		}
 	    });
 	},
@@ -306,10 +319,11 @@
 	    if(ns.ref_visible){
 		_this._bind_ac(itm.fieldContainer.find('input'), id);
 	    }
+
 	    _this.updateChildrenPathAndName(_this);
 	},
     });
-    Alpaca.registerTemplate("arrayItemToolbar", '<div class="ui-widget-header ui-corner-all alpaca-fieldset-array-item-toolbar">{{each(k,v) buttons}}<button class="alpaca-fieldset-array-item-toolbar-icon alpaca-fieldset-array-item-toolbar-${v.feature}">${v.label}</button>{{/each}}<div class="dda-array-toolbar-container-right"><div class="dda-ref-toggles"><input id="dda-ref-tgl1-${id}" type="radio" name="radio-${id}" value="dda-ref-regular" checked="checked"><label for="dda-ref-tgl1-${id}">Regular</label><input id="dda-ref-tgl2-${id}" type="radio" name="radio-${id}" value="dda-ref-reference"><label for="dda-ref-tgl2-${id}">Reference</label></div></div></div>');
+    Alpaca.registerTemplate("arrayItemToolbarTgl", '<div class="ui-widget-header ui-corner-all alpaca-fieldset-array-item-toolbar">{{each(k,v) buttons}}<button class="alpaca-fieldset-array-item-toolbar-icon alpaca-fieldset-array-item-toolbar-${v.feature}">${v.label}</button>{{/each}}<div class="dda-array-toolbar-container-right"><div class="dda-ref-toggles"><input id="dda-ref-tgl1-${id}" type="radio" name="radio-${id}" value="dda-ref-regular" checked="checked"><label for="dda-ref-tgl1-${id}">Regular</label><input id="dda-ref-tgl2-${id}" type="radio" name="radio-${id}" value="dda-ref-reference"><label for="dda-ref-tgl2-${id}">Reference</label></div></div></div>');
 
 })(jQuery);
 
