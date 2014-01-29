@@ -38,13 +38,9 @@
             // Default object type we are trying to complete
             this.ref_type='dns';
 
-            // Define our DNS schema
+            // Define our DNS schema; This just renders an input field
             this.schema.items = {
                 "title": "Domain Name Indicator",
-		// "type": "object",
-		// "properties": {
-		//     "test": {}
-		// }
             }
 
         },

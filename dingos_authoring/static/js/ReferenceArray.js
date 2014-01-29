@@ -199,7 +199,7 @@
 		    $('.dda-ref-toggles', toolbarElem).buttonset();
 
 		    // Register toggle handlers
-		    $('.dda-ref-toggles input', toolbarElem).click(function(){
+		    $('.dda-ref-toggles input', toolbarElem).change(function(){
 			_this.toggle_state(id);
 		    });
 		    
@@ -208,23 +208,13 @@
                 }
             }
         },
-	create_ref_element: function(id, parent){
+	_bind_ac: function(el, id){
 	    var _this = this;
-	    ref_template = '<div id="dda-ref-input-'+id+'"></div>';
-
-	    var ap = $(ref_template).alpaca({
-		"schema": {},
-		"options": {
-		    "name": parent.preName + '_ref',
-		    "placeholder": "Object Reference",
-		    // We are not gonna use the internal typeahead helper...
-		}
-	    });
-
-	    ap.find('input').autocomplete({
+	    /* bind the autocomplete to el */
+	    el.autocomplete({
 		source: function( request, response ) {
 		    $.ajax({
-			url: "ref",
+			url: "ref/",
 			dataType: "json",
 			data: {
 			    type: _this.ref_type,
@@ -243,11 +233,26 @@
 		},
 		autoFocus: true,
 		select: function(event, ui){
-		    console.log( ui.item ?
-			 "Selected: " + ui.item.label :
-			 "Nothing selected, input was " + this.value);
+		    if(ui.item){
+			$('#dda-input-ref-span_'+id).html(ui.item.label);
+		    }
+
 		}
 	    });
+	},
+	create_ref_element: function(id, parent){
+	    var _this = this;
+
+	    var ap = $('<div></div>').alpaca({
+		"schema": {},
+		"options": {
+		    "name": parent.preName + '_ref',
+		    "placeholder": "Object Reference",
+		    // We are not gonna use the internal typeahead helper...
+		}
+	    });
+
+	    ap.find('input').after('<span id="dda-input-ref-span_'+id+'"></span>');
 
 	    return ap;
 	},
@@ -268,7 +273,8 @@
 		    'fieldContainer': _tmp_a.fieldContainer,
 		    'children': [],
 		    'childrenById': {},
-		    'childrenByPropertyId': {}
+		    'childrenByPropertyId': {},
+		    'ref_visible': false
 		};
 		_this.states[id]['children'].push(_tmp_a);
 		_this.states[id]['childrenById'][_tmp_a.id] = _tmp_a;
@@ -283,9 +289,9 @@
 
 	    var ns = _this.states[id];
 
-	    itm.fieldContainer.replaceWith($(ns.fieldContainer));
-	    itm.fieldContainer = ns.fieldContainer;
 	    itm.field = ns.field; 
+	    itm.fieldContainer.replaceWith($(ns.fieldContainer));
+	    itm.fieldContainer = ns.fieldContainer;	    
 	    itm.children = ns.children;
 	    itm.childrenById = ns.childrenById;
 	    itm.childrenByPropertyId = ns.childrenByPropertyId;
@@ -296,8 +302,11 @@
 	    ns.childrenById = old_childrenById;
 	    ns.childrenByPropertyId = old_childrenByPropertyId;
 	    
+	    ns.ref_visible = !ns.ref_visible;
+	    if(ns.ref_visible){
+		_this._bind_ac(itm.fieldContainer.find('input'), id);
+	    }
 	    _this.updateChildrenPathAndName(_this);
-console.log(itm);
 	},
     });
     Alpaca.registerTemplate("arrayItemToolbar", '<div class="ui-widget-header ui-corner-all alpaca-fieldset-array-item-toolbar">{{each(k,v) buttons}}<button class="alpaca-fieldset-array-item-toolbar-icon alpaca-fieldset-array-item-toolbar-${v.feature}">${v.label}</button>{{/each}}<div class="dda-array-toolbar-container-right"><div class="dda-ref-toggles"><input id="dda-ref-tgl1-${id}" type="radio" name="radio-${id}" value="dda-ref-regular" checked="checked"><label for="dda-ref-tgl1-${id}">Regular</label><input id="dda-ref-tgl2-${id}" type="radio" name="radio-${id}" value="dda-ref-reference"><label for="dda-ref-tgl2-${id}">Reference</label></div></div></div>');
