@@ -39,12 +39,13 @@
 	    // Override the collapsible feature
 	    this.options.collapsible = false;
 
-	    
-	    
+	    // Default ref type
+	    this.ref_type = 'any'; 
 	    
 	    // This is where we save the states of the toggable elements
 	    this.states = {};
 
+	    //TODO: init this.data? ;; Alpaca.isArray(this.data) Alpaca.isObject(this.data) ?
 	    
         },
 	/**
@@ -74,7 +75,8 @@
 			    var toId = _this.children[toIndex].getId();
                             var fromContainer = $('#' + fromId + '-item-container');
                             var toContainer = $('#' + toId + '-item-container');
-			    // Swap in dom -- this only workds because elements are next to each other
+			    // Swap elements in dom 
+			    // Only works because elements are next to each other
 			    if(isUp == true)
 				toContainer.before(fromContainer);
 			    else
@@ -207,18 +209,43 @@
             }
         },
 	create_ref_element: function(id, parent){
+	    var _this = this;
 	    ref_template = '<div id="dda-ref-input-'+id+'"></div>';
 
 	    var ap = $(ref_template).alpaca({
-		"schema": {"type" : "string"},
-		"render": function(fc, cb){ /* fieldControl, Callback */
-		    //console.log(fc);
-		    // fc.id = id;
-		    // fc.parent = parent
-		    // fc.path = parent.path + '['+ id +']';
-		    if (cb){
-                        cb();
-                    }
+		"schema": {},
+		"options": {
+		    "name": parent.preName + '_ref',
+		    "placeholder": "Object Reference",
+		    // We are not gonna use the internal typeahead helper...
+		}
+	    });
+
+	    ap.find('input').autocomplete({
+		source: function( request, response ) {
+		    $.ajax({
+			url: "ref",
+			dataType: "json",
+			data: {
+			    type: _this.ref_type,
+			    q: request.term
+			},
+			success: function( data ) {
+			    //TODO: test for data.success
+			    response( $.map( data.result, function( item ) {
+				return {
+				    label: item.title,
+				    value: item.value
+				}
+			    }));
+			}
+		    });
+		},
+		autoFocus: true,
+		select: function(event, ui){
+		    console.log( ui.item ?
+			 "Selected: " + ui.item.label :
+			 "Nothing selected, input was " + this.value);
 		}
 	    });
 
@@ -226,13 +253,51 @@
 	},
 	toggle_state: function(id){
 	    var _this = this;
+	    var itm = _this.childrenById[id];
 
 	    if(!(id in _this.states)){
 		//Init the element for toggling
-		console.log(_this.create_ref_element(id, _this).alpaca())
+		var _tmp = _this.create_ref_element(id, itm);
+		var _tmp_a = _tmp.alpaca();
+		_tmp_a.propertyId = 'ref';
+		_tmp_a.parent = _this;
+
+		_this.states[id] = {
+		    'elem': _tmp,
+		    'field': _tmp_a.field,
+		    'fieldContainer': _tmp_a.fieldContainer,
+		    'children': [],
+		    'childrenById': {},
+		    'childrenByPropertyId': {}
+		};
+		_this.states[id]['children'].push(_tmp_a);
+		_this.states[id]['childrenById'][_tmp_a.id] = _tmp_a;
+		_this.states[id]['childrenByPropertyId']['ref'] = _tmp_a;
 	    }
 	    
-	    //TODO: toggle me!
+	    var old_field = itm.field;
+	    var old_fieldContainer = itm.fieldContainer;
+	    var old_children = itm.children;
+	    var old_childrenById = itm.childrenById;
+	    var old_childrenByPropertyId = itm.childrenByPropertyId;
+
+	    var ns = _this.states[id];
+
+	    itm.fieldContainer.replaceWith($(ns.fieldContainer));
+	    itm.fieldContainer = ns.fieldContainer;
+	    itm.field = ns.field; 
+	    itm.children = ns.children;
+	    itm.childrenById = ns.childrenById;
+	    itm.childrenByPropertyId = ns.childrenByPropertyId;
+
+	    ns.field = old_field;
+	    ns.fieldContainer = old_fieldContainer;
+	    ns.children = old_children;
+	    ns.childrenById = old_childrenById;
+	    ns.childrenByPropertyId = old_childrenByPropertyId;
+	    
+	    _this.updateChildrenPathAndName(_this);
+console.log(itm);
 	},
     });
     Alpaca.registerTemplate("arrayItemToolbar", '<div class="ui-widget-header ui-corner-all alpaca-fieldset-array-item-toolbar">{{each(k,v) buttons}}<button class="alpaca-fieldset-array-item-toolbar-icon alpaca-fieldset-array-item-toolbar-${v.feature}">${v.label}</button>{{/each}}<div class="dda-array-toolbar-container-right"><div class="dda-ref-toggles"><input id="dda-ref-tgl1-${id}" type="radio" name="radio-${id}" value="dda-ref-regular" checked="checked"><label for="dda-ref-tgl1-${id}">Regular</label><input id="dda-ref-tgl2-${id}" type="radio" name="radio-${id}" value="dda-ref-reference"><label for="dda-ref-tgl2-${id}">Reference</label></div></div></div>');

@@ -1,6 +1,7 @@
 import json, collections
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.http import HttpResponse, HttpResponseRedirect
 
 from libmantis import *
 from mantis_client import utils
@@ -59,4 +60,24 @@ def index(request):
     return render_to_response('dingos_authoring/index.html',
                               res,
                               context_instance=RequestContext(request))
+
+
+# Ajax autocomplete view
+def ref(request):
+    res = {'success':False}
+    if request.method == u'GET':
+        GET = request.GET
+        if GET.has_key(u'type') and GET.has_key(u'q'):
+            q = GET[u'q']
+            t = GET[u'type']
+            print "TODO: fetch data for type", t, "and with q", q
+            #TODO: fetch data from db and prepare result set
+            res['result'] = [
+                {'title': 'Test Item 1', 'value': 'testitem1'},
+                {'title': 'Test Item 2', 'value': 'testitem2'},
+                {'title': 'Test Item 3', 'value': 'testitem3'},
+            ]
+            res['success'] = True
+    res = json.dumps(res)
+    return HttpResponse(res, content_type='application/json')
 
