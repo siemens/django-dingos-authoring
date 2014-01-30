@@ -77,3 +77,14 @@ input, button {
 .dda-ref-toggles > .ui-button {
     margin-left: 0px !important;
 }
+
+.dda-autocomplete-cat {
+    font-weight: bold;
+    padding: .2em .4em;
+    margin: .3em 0 .2em;
+    line-height: 1.5;
+}
+
+.dda-autocomplete-desc {
+    font-weight: normal;
+}

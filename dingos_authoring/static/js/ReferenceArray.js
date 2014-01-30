@@ -211,7 +211,7 @@
 	_bind_ac: function(el, id){
 	    var _this = this;
 
-	    //TODO: on type "any" we should render a category for results. http://jqueryui.com/autocomplete/#categories
+	    
 
 	    var ac_trigger = function(event, ui){
 		if(ui.item){
@@ -223,8 +223,28 @@
 		_this.renderValidationState(true);
 	    }
 
+
+	    $.widget( "custom.ddacomplete", $.ui.autocomplete, {
+		_renderMenu: function( ul, items ) {
+		    var that = this,
+		    currentCategory = "";
+		    $.each( items, function( index, item ) {
+			if ( item.category != currentCategory ) {
+			    ul.append( "<li class='dda-autocomplete-cat'>" + item.category + "</li>" );
+			    currentCategory = item.category;
+			}
+			that._renderItemData( ul, item );
+		    });
+		},
+		_renderItem: function( ul, item ) {
+		    return $( "<li>" )
+			.append( "<a>" + item.id + '<br><span class="dda-autocomplete-desc">' + item.label + '</span></a>')
+			.appendTo( ul );
+		}
+	    });
+
 	    /* bind the autocomplete to el */
-	    el.autocomplete({
+	    el.ddacomplete({
 		source: function( request, response ) {
 		    $.ajax({
 			url: "ref/",
@@ -234,11 +254,12 @@
 			    q: request.term
 			},
 			success: function( data ) {
-			    //TODO: test for data.success
 			    response( $.map( data.result, function( item ) {
 				return {
-				    label: item.title,
-				    value: item.value
+				    id: item.id,
+				    label: item.name,
+				    value: item.id,
+				    category: item.cat
 				}
 			    }));
 			}
