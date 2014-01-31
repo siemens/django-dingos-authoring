@@ -60,14 +60,14 @@
 	  };
       })(jQuery);
   </script>
-  <script src="{% static 'js/alpaca.js' %}"></script>
+  <script src="{% static 'alpaca/js/alpaca.js' %}"></script>
   <script src="{% static 'js/ReferenceArray.js' %}"></script>
   <script src="{% static 'js/DnsArray.js' %}"></script>
   <script src="{% static 'js/dingos_authoring.js' %}"></script>
 {% endblock javascripts %}
 
 {% block extrastyle %}
+  <link href="{% static 'alpaca/css/alpaca.css' %}" rel="stylesheet">
+  <link href="{% static 'alpaca/css/alpaca-jqueryui.css' %}" rel="stylesheet">
   <link href="{% static 'css/dingos_authoring.css' %}" rel="stylesheet">
-  <link href="{% static 'css/alpaca.css' %}" rel="stylesheet">
-  <link href="{% static 'css/alpaca-jqueryui.css' %}" rel="stylesheet">
 {% endblock extrastyle%}
