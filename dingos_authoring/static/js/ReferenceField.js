@@ -56,24 +56,35 @@
 
 		if (this.controlFieldTemplateDescriptor) {
 
-                    this.field = _this.view.tmpl(this.controlFieldTemplateDescriptor, {
-			"id": this.getId(),
-			"name": this.name,
-			"options": this.options
-                    });
-		    $('button', this.field).button().click(function(){
-			if($(this).hasClass('dda-toggle-active')){
-			    //toggle off
-			    $(this).removeClass('dda-toggle-active');
-			    _this.toggle_state();
-			}else{
-			    //toggle on
-			    $(this).addClass('dda-toggle-active');
-			    _this.toggle_state();
-			}
-			
-		    }).hover(function(e){e.preventDefault();return false;});
-                    this.injectField(this.field);
+		    if(!_this.ref_only){
+			this.field = _this.view.tmpl(this.controlFieldTemplateDescriptor, {
+			    "id": this.getId(),
+			    "name": this.name,
+			    "options": this.options
+			});
+			$('button', this.field).button().click(function(){
+			    if($(this).hasClass('dda-toggle-active')){
+				//toggle off
+				$(this).removeClass('dda-toggle-active');
+				_this.toggle_state();
+			    }else{
+				//toggle on
+				$(this).addClass('dda-toggle-active');
+				_this.toggle_state();
+			    }
+			}).hover(function(e){e.preventDefault();return false;});
+			this.injectField(this.field);
+		    }else{
+			var _tmp = _this.create_ref_element(this.getId());
+			var _tmp_a = _tmp.alpaca();
+			this.field = $(_tmp_a.field[0]);
+			_this._bind_ac(this.field, this.getId());
+			this.injectField(this.field);
+			//need to append after injection
+			this.field.after('<div id="dda-input-ref-span_' + this.getId() + '"></div>');
+		    }
+
+
 		}
 
 		if (onSuccess) {
@@ -200,7 +211,7 @@
 		    };
 		    _this.field = _this.field[0] //need to fix because of the appended "ref" button. Otherwiese val() would fail...
 
-		    $(_this.fieldContainer).append('<div id="dda-input-ref-span_'+id+'"></div>')
+		    $(_this.fieldContainer).append('<div id="dda-input-ref-span_'+id+'"></div>');
 		}
 
 		var field_elem_old = $(_this.field).detachAndReplaceWith(_this.state['field_elem']);

@@ -54,9 +54,9 @@
 </div>
 <script type="application/javascript">
     $(function() {
-        var tmpl = {{ json_template|safe }};
-        if(tmpl)
-            $.dingos_authoring.init(tmpl);
+        var schema = {{ schema|safe }};
+        var options = {{ options|safe }};
+        $.dingos_authoring.init(schema, options);
     });
 </script>
 {% endblock content %}

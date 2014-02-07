@@ -1,16 +1,10 @@
-/**
- * This is the MANTIS Rerference field for Alpaca. It inherits functionality
- * from MantisRefField which adds the possibility to query existing
- * object references
- */
-
 (function($) {
 
     var Alpaca = $.alpaca;
 
-    Alpaca.Fields.MantisRefField = Alpaca.Fields.ArrayField.extend(
+    Alpaca.Fields.MantisRefArray = Alpaca.Fields.ArrayField.extend(
     /**
-     * @lends Alpaca.Fields.MantisRefField.prototype
+     * @lends Alpaca.Fields.MantisRefArray.prototype
      */
     {
         /**
@@ -91,16 +85,6 @@
 			    // Regenerate names
                             _this.updatePathAndName();
                             return false;
-                            // var toId = _this.children[toIndex].getId();
-                            // var fromContainer = $('#' + fromId + '-item-container');
-                            // var toContainer = $('#' + toId + '-item-container');
-                            // _this.reRenderItem(_this.children[index], toContainer);
-                            // _this.reRenderItem(_this.children[toIndex], fromContainer);
-                            // var tmp = _this.children[index];
-                            // _this.children[index] = _this.children[toIndex];
-                            // _this.children[toIndex] = tmp;
-                            // _this.updatePathAndName();
-                            // return false;
                         }
                     }
                 });
@@ -286,7 +270,7 @@
 		}
 	    });
 
-	    ap.find('input').after('<span id="dda-input-ref-span_'+id+'"></span>');
+	    ap.find('input').after('<div id="dda-input-ref-span_'+id+'"></div>');
 
 	    return ap;
 	},

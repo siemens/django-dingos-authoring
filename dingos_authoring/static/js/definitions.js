@@ -39,6 +39,7 @@
         setup: function() {
             this.base();
             this.ref_type='related_indicator';
+	    this.ref_only = true;
         },
 
     });

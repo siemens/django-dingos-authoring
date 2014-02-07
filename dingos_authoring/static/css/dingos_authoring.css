@@ -88,3 +88,11 @@ input, button {
 .dda-autocomplete-desc {
     font-weight: normal;
 }
+
+
+.dda-ref-toggle{
+   color: black !important;
+}
+.dda-toggle-active {
+    background-image: linear-gradient(#E5E5E5, #DBDBDB) !important;  
+}

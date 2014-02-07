@@ -1,22 +1,22 @@
 $(function() {
 
+
     $('#template_selector').change(function(){
         $(this).closest('form').trigger('submit');
     });
 
 
     $.dingos_authoring = {
-        init: function(json){
+        init: function(schema, options){
             instance = this;
-            this.json = json;
+            this.schema = schema;
+	    this.options = options;
             this.template_head = $('#dda-template-head');
             this.template_body = $('#dda-template-body');
             this.export_btn = $('#dda-export-btn');
 
-            // Check for json template is not empty
-            if($.isEmptyObject(json))
+            if($.isEmptyObject(schema))
                 return;
-            // TODO: more checks?
 
             // Let it render
             this.render(function(elem){
@@ -31,26 +31,11 @@ $(function() {
 
         },
         render: function(callback){
-            this.template_head.text(this.json.title);
+            this.template_head.text(this.schema.title);
             this.template_body.html('');
-            var elem; //the rendered alpaca element
-            elem = this.template_body.alpaca({
-                schema: this.json,
-                options: {
-                    "collapsible": false,
-                    "fields":{
-                        "indicator_title": {},
-                        "indicator_alternative_id": {},
-                        "indicator_description": {},
-                        "indicator_confidence": {"emptySelectFirst": true},
-                        "indicator_sighting": {"type": "select"},
-                        "indicator_snort_rules": {"toolbarSticky": true, "collapsible": false},
-                        "observed_dns_names": {"toolbarSticky": true, "collapsible": false},
-                        "observed_ip_addresses": {"toolbarSticky": true, "collapsible": false},
-                        "related_malware_samples_hash": {"toolbarSticky": true, "collapsible": false},
-                        "custom_array": {}
-                    }
-                },
+            var elem = this.template_body.alpaca({
+                schema: this.schema,
+                options: this.options,
                 postRender: function(form) {
                     callback(form);
                 },

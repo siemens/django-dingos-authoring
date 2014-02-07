@@ -15,6 +15,55 @@ from mantis_client.mantis_templates import indicators as mantis_indicators
 
 def index(request):
 
+    json_skeleton = """
+{
+    "title": "",
+    "description": "",
+    "type": "object",
+    "properties": {
+
+    },
+    "definitions": {
+        "indicator_title": {
+            "type": "string",
+            "title": "Indicator Title",
+            "description": "Provide a descriptive title of the indicator",
+            "required": true
+        },
+        "indicator_alternative": {
+            "type": "string",
+            "title": "Indicator Alternative ID",
+            "description": "e.g. INVES-XXXXX",
+            "required": true
+        },
+	"indicator_confidence": {
+	    "enum": ["High","Medium","Low"],    
+            "required": "true",
+            "default": "Medium"
+	},
+        "indicator_sighting": {
+            "enum": ["PLM-CERT","DSIE","Mandiant"],
+            "required": "true",
+            "default":"PLM-CERT"
+        }
+    }
+}
+    """
+
+    options_skeleton = """
+{
+    "fields": {
+	"indicator_title": {
+	},
+	"indicator_sighting": {
+	}
+    }
+}
+    """
+
+    options_skeleton = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(options_skeleton)
+    options_skeleton = json.dumps(options_skeleton)
+
     available_templates = {};
     for obj_elem in (dir(mantis_indicators)):
         if obj_elem.startswith("TEMPLATE_"):
@@ -25,11 +74,19 @@ def index(request):
         ret = []
         for atn, ati in available_templates.iteritems():
             samp = ati.SAMPLE_JSON
-            #jsamp = json.loads(samp)
             jsamp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(samp)
+
+            # Prepare/enrich json template
+            
+            temp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(json_skeleton)
+            temp['title'] = jsamp['meta']['title']
+            temp['description'] = jsamp['meta']['description']
+            temp['properties'] = jsamp['data']
+
+
             ret.append({'id': atn.replace('TEMPLATE_', ''),
-                        'title': jsamp['data']['title'],
-                        'template': json.dumps(jsamp['data'])})
+                        'title': temp['title'],
+                        'template': json.dumps(temp)})
         return ret
 
     def get_template_json(id):
@@ -46,6 +103,7 @@ def index(request):
                 return t
         return None
 
+
     at = get_available_templates()
     selected_template = at[0]['id'] if at else None
     try:
@@ -53,44 +111,33 @@ def index(request):
     except (KeyError):
         pass
 
-    #TOOD: Add custom template (click and drop)
 
+
+    # from schema import alpaca_generator
+    # sc = alpaca_generator(get_template_json(selected_template))
+    # schema_template = sc.get_schema()
+    # options_template = sc.get_options()
+    schema_template = get_template_json(selected_template)
+    options_template = options_skeleton
+
+    print schema_template
+    print options_template
 
     res = {
         'title': 'MANTIS Dingos Authoring',
         'available_templates': at,
         'selected_template': get_template(selected_template),
-        'json_template': get_template_json(selected_template)
+        'schema': schema_template,
+        'options': options_template
     }
     return render_to_response('dingos_authoring/index.html',
                               res,
                               context_instance=RequestContext(request))
-
-
-# Ajax autocomplete view
-def ref_old(request):
-    res = {'success':False}
-    if request.method == u'GET':
-        GET = request.GET
-        if GET.has_key(u'type') and GET.has_key(u'q'):
-            q = GET[u'q']
-            t = GET[u'type']
-            print "TODO: fetch data for type", t, "and with q", q
-            #TODO: fetch data from db and prepare result set
-            res['result'] = [
-                {'title': 'Test Item 1', 'value': 'testitem1'},
-                {'title': 'Test Item 2', 'value': 'testitem2'},
-                {'title': 'Test Item 3', 'value': 'testitem3'},
-            ]
-            res['success'] = True
-    res = json.dumps(res)
-    return HttpResponse(res, content_type='application/json')
+    
 
 
 
 class ref(BasicListView):
-
-    
     def get_queryset(self):
 
         if self.request.method == u'GET':
@@ -100,6 +147,7 @@ class ref(BasicListView):
                 t = GET[u'type']
 
                 t_q = Q(iobject_type__name__icontains=t)
+                t_q = Q(iobject_type__name__icontains='file')
                 q_q = Q(identifier__uid__icontains=q) | Q(name__icontains=q)
 
                 #TODO: check t and q for validity
