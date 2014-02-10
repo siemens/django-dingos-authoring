@@ -13,6 +13,7 @@
         setup: function() {
             this.base();
             this.ref_type='dns';
+	    this.ref_only = true;
 
             // Define our DNS schema; This just renders an input field
             // this.schema.items = {

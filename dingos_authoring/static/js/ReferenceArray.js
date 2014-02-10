@@ -90,6 +90,121 @@
                 });
             }
         },
+
+
+
+
+_addItem: function(index, itemSchema, itemOptions, itemData, insertAfterId, isDynamicSubItem, postRenderCallback) {
+            var _this = this;
+            if (_this._validateEqualMaxItems()) {
+
+                if (itemOptions === null && _this.options && _this.options.fields && _this.options.fields["item"]) {
+                    itemOptions = _this.options.fields["item"];
+                }
+
+                var containerElem = _this.renderItemContainer(insertAfterId);
+
+		if(_this.ref_only)
+		    itemSchema = {};
+
+                containerElem.alpaca({
+                    "data" : itemData,
+                    "options": itemOptions,
+                    "schema" : itemSchema,
+                    "view" : this.view.id ? this.view.id : this.view,
+                    "connector": this.connector,
+                    "error": function(err)
+                    {
+                        _this.destroy();
+
+                        _this.errorCallback.call(_this, err);
+                    },
+                    "notTopLevel":true,
+                    "isDynamicCreation": (isDynamicSubItem || this.isDynamicCreation),
+                    "render" : function(fieldControl, cb) {
+                        // render
+                        fieldControl.parent = _this;
+                        // setup item path
+                        fieldControl.path = _this.path + "[" + index + "]";
+                        fieldControl.nameCalculated = true;
+                        fieldControl.render(null, function() {
+
+			    //change the field, to a reference field if neccessary
+			    if(_this.ref_only){
+				var ref_el = _this.create_ref_element(fieldControl.getId(), _this);
+				var ref_el_a = ref_el.alpaca();
+				fieldControl.field.replaceWith(ref_el_a.field);
+				fieldControl.field = ref_el_a.field;
+				_this._bind_ac(fieldControl.field, fieldControl.getId());
+			    }
+
+
+                            containerElem.attr("id", fieldControl.getId() + "-item-container");
+                            containerElem.attr("alpaca-id", fieldControl.getId());
+                            containerElem.addClass("alpaca-item-container");
+                            // render item label if needed
+                            if (_this.options && _this.options.itemLabel) {
+                                var itemLabelTemplateDescriptor = _this.view.getTemplateDescriptor("itemLabel");
+                                var itemLabelElem = _this.view.tmpl(itemLabelTemplateDescriptor, {
+                                    "options": _this.options,
+                                    "index": index ? index + 1 : 1,
+                                    "id": _this.id
+                                });
+                                itemLabelElem.prependTo(containerElem);
+                            }
+                            // remember the control
+                            _this.addChild(fieldControl, index);
+                            _this.renderToolbar(containerElem);
+                            _this.renderValidationState();
+                            _this.updatePathAndName();
+
+                            // trigger update on the parent array
+                            _this.triggerUpdate();
+
+                            // if not empty, mark the "last" and "first" dom elements in the list
+                            if ($(containerElem).siblings().addBack().length > 0)
+                            {
+                                $(containerElem).parent().removeClass("alpaca-fieldset-items-container-empty");
+
+                                $(containerElem).siblings().addBack().removeClass("alpaca-item-container-first");
+                                $(containerElem).siblings().addBack().removeClass("alpaca-item-container-last");
+                                $(containerElem).siblings().addBack().first().addClass("alpaca-item-container-first");
+                                $(containerElem).siblings().addBack().last().addClass("alpaca-item-container-last");
+                            }
+
+                            // store key on dom element
+                            $(containerElem).attr("data-alpaca-item-container-item-key", index);
+
+                            _this.updateToolbarItemsStatus(_this.outerEl);
+
+
+                            if (cb)
+                            {
+                                cb();
+                            }
+                        });
+                    },
+                    "postRender": function(control)
+                    {
+                        if (postRenderCallback)
+                        {
+                            postRenderCallback(control);
+                        }
+                    }
+                });
+
+                //this.updateToolbarItemsStatus(this.outerEl);
+
+                return containerElem;
+            }
+        },
+
+
+
+
+
+
+
 	/**
 	 * Renders array item toolbar.
 	 *
@@ -179,14 +294,18 @@
                         })(buttonsDef[i]);
                     }
 		    
-		    // Beautify toggles
-		    $('.dda-ref-toggles', toolbarElem).buttonset();
+		    if(_this.ref_only){
+			// Remove toggles on ref_only
+			$('.dda-ref-toggles', toolbarElem).remove();
+		    }else{
+			// Beautify toggles
+			$('.dda-ref-toggles', toolbarElem).buttonset();
 
-		    // Register toggle handlers
-		    $('.dda-ref-toggles input', toolbarElem).change(function(){
-			_this.toggle_state(id);
-		    });
-		    
+			// Register toggle handlers
+			$('.dda-ref-toggles input', toolbarElem).change(function(){
+			    _this.toggle_state(id);
+			});
+		    }
 
 		    toolbarElem.prependTo(containerElem);
                 }

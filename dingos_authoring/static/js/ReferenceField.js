@@ -35,7 +35,10 @@
                     this.options.size = 40;
 		}
 
-		this.controlFieldTemplateDescriptor = this.view.getTemplateDescriptor("controlFieldText");
+		// Default ref type
+		this.ref_type = 'any'; 
+
+		this.controlFieldTemplateDescriptor = this.view.getTemplateDescriptor("controlFieldRef");
             },
 
             /**
@@ -516,9 +519,7 @@
             
 	});
 
-    //Alpaca.registerTemplate("controlFieldText", '<input type="text" id="${id}" {{if options.placeholder}}placeholder="${options.placeholder}"{{/if}} {{if options.size}}size="${options.size}"{{/if}} {{if options.readonly}}readonly="readonly"{{/if}} {{if name}}name="${name}"{{/if}} {{each(i,v) options.data}}data-${i}="${v}"{{/each}}/>');
-
-    Alpaca.registerTemplate("controlFieldText", '<input type="text" id="${id}" {{if options.placeholder}} placeholder="${options.placeholder}"{{/if}} {{if options.size}} size="${options.size}" {{/if}} {{if options.readonly}} readonly="readonly" {{/if}} {{if name}} name="${name}" {{/if}} {{each(i,v) options.data}} data-${i}="${v}" {{/each}} /><span class="dda-field-toggle-container"><button id="dda-ref-tgl-${id}" class="dda-ref-toggle">Ref.</button></span>');
+    Alpaca.registerTemplate("controlFieldRef", '<input type="text" id="${id}" {{if options.placeholder}} placeholder="${options.placeholder}"{{/if}} {{if options.size}} size="${options.size}" {{/if}} {{if options.readonly}} readonly="readonly" {{/if}} {{if name}} name="${name}" {{/if}} {{each(i,v) options.data}} data-${i}="${v}" {{/each}} /><span class="dda-field-toggle-container"><button id="dda-ref-tgl-${id}" class="dda-ref-toggle">Ref.</button></span>');
 
     Alpaca.registerMessages({
         "invalidPattern": "This field should have pattern {0}",
