@@ -30,20 +30,31 @@ def index(request):
             "description": "Provide a descriptive title of the indicator",
             "required": true
         },
+        "indicator_description": {
+            "type": "string",
+            "title": "Indicator Description",
+            "required": false
+        },
         "indicator_alternative": {
             "type": "string",
             "title": "Indicator Alternative ID",
             "description": "e.g. INVES-XXXXX",
-            "required": true
+            "required": false
+        },
+        "indicator_type": {
+            "title": "Indicator Type",
+            "enum": ["IP Watchlist"]
         },
 	"indicator_confidence": {
+            "title": "Indicator Confidence",
 	    "enum": ["High","Medium","Low"],    
-            "required": "true",
+            "required": true,
             "default": "Medium"
 	},
         "indicator_sighting": {
+            "title": "Indicator Sighting",
             "enum": ["PLM-CERT","DSIE","Mandiant"],
-            "required": "true",
+            "required": true,
             "default":"PLM-CERT"
         }
     }
@@ -53,9 +64,13 @@ def index(request):
     options_skeleton = """
 {
     "fields": {
-	"indicator_title": {
+    },
+    "definitions": {
+    	"indicator_sighting": {
+            "type": "select"
 	},
-	"indicator_sighting": {
+    	"indicator_type": {
+            "type": "select"
 	}
     }
 }
@@ -83,10 +98,14 @@ def index(request):
             temp['description'] = jsamp['meta']['description']
             temp['properties'] = jsamp['data']
 
+            tempo = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(options_skeleton)
+            tempo['fields'] = jsamp['options']
 
             ret.append({'id': atn.replace('TEMPLATE_', ''),
                         'title': temp['title'],
-                        'template': json.dumps(temp)})
+                        'template': json.dumps(temp),
+                        'options': json.dumps(tempo)
+                    })
         return ret
 
     def get_template_json(id):
@@ -94,6 +113,13 @@ def index(request):
         for t in at:
             if t['id']==id:
                 return t['template']
+        return '{}'
+
+    def get_options_json(id):
+        at = get_available_templates()
+        for t in at:
+            if t['id']==id:
+                return t['options']
         return '{}'
 
     def get_template(id):
@@ -118,7 +144,7 @@ def index(request):
     # schema_template = sc.get_schema()
     # options_template = sc.get_options()
     schema_template = get_template_json(selected_template)
-    options_template = options_skeleton
+    options_template = get_options_json(selected_template)
 
     print schema_template
     print options_template

@@ -34,6 +34,7 @@ $(function() {
             this.template_head.text(this.schema.title);
             this.template_body.html('');
             var elem = this.template_body.alpaca({
+		data: '',
                 schema: this.schema,
                 options: this.options,
                 postRender: function(form) {

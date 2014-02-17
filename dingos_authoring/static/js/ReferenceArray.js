@@ -91,10 +91,7 @@
             }
         },
 
-
-
-
-_addItem: function(index, itemSchema, itemOptions, itemData, insertAfterId, isDynamicSubItem, postRenderCallback) {
+	_addItem: function(index, itemSchema, itemOptions, itemData, insertAfterId, isDynamicSubItem, postRenderCallback) {
             var _this = this;
             if (_this._validateEqualMaxItems()) {
 
@@ -133,7 +130,7 @@ _addItem: function(index, itemSchema, itemOptions, itemData, insertAfterId, isDy
 			    if(_this.ref_only){
 				var ref_el = _this.create_ref_element(fieldControl.getId(), _this);
 				var ref_el_a = ref_el.alpaca();
-				fieldControl.field.replaceWith(ref_el_a.field);
+				fieldControl.field.replaceWith(ref_el);
 				fieldControl.field = ref_el_a.field;
 				_this._bind_ac(fieldControl.field, fieldControl.getId());
 			    }
@@ -198,11 +195,6 @@ _addItem: function(index, itemSchema, itemOptions, itemData, insertAfterId, isDy
                 return containerElem;
             }
         },
-
-
-
-
-
 
 
 	/**
@@ -325,26 +317,6 @@ _addItem: function(index, itemSchema, itemOptions, itemData, insertAfterId, isDy
 		}
 		_this.renderValidationState(true);
 	    }
-
-
-	    $.widget( "custom.ddacomplete", $.ui.autocomplete, {
-		_renderMenu: function( ul, items ) {
-		    var that = this,
-		    currentCategory = "";
-		    $.each( items, function( index, item ) {
-			if ( item.category != currentCategory ) {
-			    ul.append( "<li class='dda-autocomplete-cat'>" + item.category + "</li>" );
-			    currentCategory = item.category;
-			}
-			that._renderItemData( ul, item );
-		    });
-		},
-		_renderItem: function( ul, item ) {
-		    return $( "<li>" )
-			.append( "<a>" + item.id + '<br><span class="dda-autocomplete-desc">' + item.label + '</span></a>')
-			.appendTo( ul );
-		}
-	    });
 
 	    /* bind the autocomplete to el */
 	    el.ddacomplete({
