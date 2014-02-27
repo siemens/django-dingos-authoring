@@ -10,7 +10,7 @@ from dingos.view_classes import BasicListView
 
 from libmantis import *
 from mantis_client import utils
-from mantis_client.mantis_templates import indicators as mantis_indicators
+from mantis_client.mantis_templates import alpaca_test as mantis_indicators
 
 
 def index(request):
@@ -88,24 +88,25 @@ def index(request):
     def get_available_templates():
         ret = []
         for atn, ati in available_templates.iteritems():
-            samp = ati.SAMPLE_JSON
-            jsamp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(samp)
+            if 'FORMDEF' in dir(ati):
+                samp = ati.FORMDEF
+                jsamp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(samp)
 
-            # Prepare/enrich json template
-            
-            temp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(json_skeleton)
-            temp['title'] = jsamp['meta']['title']
-            temp['description'] = jsamp['meta']['description']
-            temp['properties'] = jsamp['data']
+                # Prepare/enrich json template
 
-            tempo = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(options_skeleton)
-            tempo['fields'] = jsamp['options']
+                temp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(json_skeleton)
+                temp['title'] = jsamp['meta']['title']
+                temp['description'] = jsamp['meta']['description']
+                temp['properties'] = jsamp['data']
 
-            ret.append({'id': atn.replace('TEMPLATE_', ''),
-                        'title': temp['title'],
-                        'template': json.dumps(temp),
-                        'options': json.dumps(tempo)
-                    })
+                tempo = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(options_skeleton)
+                tempo['fields'] = jsamp['options']
+
+                ret.append({'id': atn.replace('TEMPLATE_', ''),
+                            'title': temp['title'],
+                            'template': json.dumps(temp),
+                            'options': json.dumps(tempo)
+                        })
         return ret
 
     def get_template_json(id):
