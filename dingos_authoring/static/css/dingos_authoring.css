@@ -11,6 +11,14 @@ input, button {
     clear: both;
 }
 
+.pull-right {
+    float: right;
+}
+
+.pull-left {
+    float: left;
+}
+
 #dda-template-body input {
     width: auto !important;
 }
@@ -95,4 +103,76 @@ input, button {
 }
 .dda-toggle-active {
     background-image: linear-gradient(#E5E5E5, #DBDBDB) !important;  
+}
+
+
+/* builder styles */
+#grp-content-container #dda-container-tabs > .ui-widget-content {
+    padding: 20px 0 !important;
+}
+
+#dda-pool-elements {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+#dda-pool-list, #dda-indicator-list {
+    background: #fff;
+    min-height: 200px;
+}
+
+#dda-pool-list > .dda-add-element, #dda-indicator-list > .dda-add-element {
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+#dda-indicator-list > .dda-add-element table, #dda-pool-list > .dda-add-element table{
+    width: 100%;
+}
+#dda-indicator-list > .dda-add-element table textarea, #dda-pool-list > .dda-add-element table textarea {
+    width: 100%;
+    resize: none;
+}
+
+#dda-pool-list .dda-pool-element {
+    margin-top: 20px;
+}
+
+.dda-obs-add, .dda-obs-remove, .dda-ind-remove {
+    border-radius: 0px;
+    color: #000;
+    margin-top: 4px !important;
+}
+
+#dda-indicator-add-btn {
+    color: #000;
+    font-size: 11px;
+    border-radius: 0px;
+}
+
+#dda-indicator-add-btn-menu {
+    position: absolute;
+    top: 30px;
+    right:10px;
+}
+
+.dda-dropzone-highlight {
+    border: 1px dashed #888888;
+    min-height: 20px;
+    margin-top: 4px;
+}
+
+.dda-dropzone-hover {
+  background-color: #EEEEEE;
+  border: 1px dashed #888888;
+  height: 50px;
+}
+
+#dda-package-indicators .dda-add-element {
+    margin-bottom: 10px;
+}
+
+#dda-pool-list .helptext {
+    margin-top: 5px;
+    display: block;
 }

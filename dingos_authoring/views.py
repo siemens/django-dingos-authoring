@@ -12,153 +12,25 @@ from libmantis import *
 from mantis_client import utils
 from mantis_client.mantis_templates import indicators as mantis_indicators
 
+import forms as observables
+
 
 def index(request):
 
-    json_skeleton = """
-{
-    "title": "",
-    "description": "",
-    "type": "object",
-    "properties": {
+    observableForms = []
+    indicatorForms = []
+    for obj_elem in dir(observables):
+        if obj_elem.startswith("Cybox"):
+            _cls = getattr(observables, obj_elem)
+            observableForms.append(_cls())
+        elif obj_elem.startswith("Stix"):
+            _cls = getattr(observables, obj_elem)
+            indicatorForms.append(_cls())
 
-    },
-    "definitions": {
-        "indicator_title": {
-            "type": "string",
-            "title": "Indicator Title",
-            "description": "Provide a descriptive title of the indicator",
-            "required": true
-        },
-        "indicator_description": {
-            "type": "string",
-            "title": "Indicator Description",
-            "required": false
-        },
-        "indicator_alternative": {
-            "type": "string",
-            "title": "Indicator Alternative ID",
-            "description": "e.g. INVES-XXXXX",
-            "required": false
-        },
-        "indicator_type": {
-            "title": "Indicator Type",
-            "enum": ["IP Watchlist"]
-        },
-	"indicator_confidence": {
-            "title": "Indicator Confidence",
-	    "enum": ["High","Medium","Low"],    
-            "required": true,
-            "default": "Medium"
-	},
-        "indicator_sighting": {
-            "title": "Indicator Sighting",
-            "enum": ["PLM-CERT","DSIE","Mandiant"],
-            "required": true,
-            "default":"PLM-CERT"
-        }
-    }
-}
-    """
-
-    options_skeleton = """
-{
-    "fields": {
-    },
-    "definitions": {
-    	"indicator_sighting": {
-            "type": "select"
-	},
-    	"indicator_type": {
-            "type": "select"
-	}
-    }
-}
-    """
-
-    options_skeleton = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(options_skeleton)
-    options_skeleton = json.dumps(options_skeleton)
-
-    available_templates = {};
-    for obj_elem in (dir(mantis_indicators)):
-        if obj_elem.startswith("TEMPLATE_"):
-            _cls = getattr(mantis_indicators, obj_elem)
-            available_templates[obj_elem]= _cls()
-
-    def get_available_templates():
-        ret = []
-        for atn, ati in available_templates.iteritems():
-            samp = ati.SAMPLE_JSON
-            jsamp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(samp)
-
-            # Prepare/enrich json template
-            
-            temp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(json_skeleton)
-            temp['title'] = jsamp['meta']['title']
-            temp['description'] = jsamp['meta']['description']
-            temp['properties'] = jsamp['data']
-
-            tempo = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(options_skeleton)
-            tempo['fields'] = jsamp['options']
-
-            ret.append({'id': atn.replace('TEMPLATE_', ''),
-                        'title': temp['title'],
-                        'template': json.dumps(temp),
-                        'options': json.dumps(tempo)
-                    })
-        return ret
-
-    def get_template_json(id):
-        at = get_available_templates()
-        for t in at:
-            if t['id']==id:
-                return t['template']
-        return '{}'
-
-    def get_options_json(id):
-        at = get_available_templates()
-        for t in at:
-            if t['id']==id:
-                return t['options']
-        return '{}'
-
-    def get_template(id):
-        at = get_available_templates()
-        for t in at:
-            if t['id']==id:
-                return t
-        return None
-
-
-    at = get_available_templates()
-    selected_template = at[0]['id'] if at else None
-    try:
-        selected_template = request.GET['template']
-    except (KeyError):
-        pass
-
-
-
-    # from schema import alpaca_generator
-    # sc = alpaca_generator(get_template_json(selected_template))
-    # schema_template = sc.get_schema()
-    # options_template = sc.get_options()
-    schema_template = get_template_json(selected_template)
-    options_template = get_options_json(selected_template)
-
-    print schema_template
-    print options_template
-
-    res = {
-        'title': 'MANTIS Dingos Authoring',
-        'available_templates': at,
-        'selected_template': get_template(selected_template),
-        'schema': schema_template,
-        'options': options_template
-    }
-    return render_to_response('dingos_authoring/index.html',
-                              res,
-                              context_instance=RequestContext(request))
+    return render_to_response('dingos_authoring/index.html',{
+        'observableForms': observableForms,
+        'indicatorForms': indicatorForms
+    })
     
 
 

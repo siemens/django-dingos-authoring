@@ -2,53 +2,110 @@
 
 
 {% block content %}
-<div class="l-2cr-fluid l-d-12">
-    <div class="c-1">
-        <div class="grp-module">
-            <h2>Template Selection</h2>
-            <div class="grp-row">
-                <form action="{% url 'dingos_authoring.index' %}" method="get">
-                    {% csrf_token %}
-                    <div class="grp-row">
-                        <table id="dda-template-table">
-                            <tbody><tr>
-                                <th><label for="template_selector">Template:</label></th>
-                                <td>
-                                    <select id="template_selector" name="template">
-                                        {% for t in available_templates %}
-                                        {% ifequal t.id selected_template.id %}
-                                        <option value="{{t.id}}" selected="selected">{{t.title}}</option>
-                                        {% else %}
-                                        <option value="{{t.id}}">{{t.title}}</option>
-                                        {% endifequal %}
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                            </tr></tbody>
-                        </table>
-                    </div>
-                    <div class="grp-row">
-                        <button id="dda-export-btn" class="grp-button" background: gray;" disabled>Export This Data</button>
-                    </div>
-                </form>
-            </div>
-        </div>
 
+<div id="dda-container-tabs">
+  <ul>
+    <li><a href="#dda-tab-1">Stix Package</a></li>
+    <li><a href="#dda-tab-2">Observable Pool</a></li>
+    <li><a href="#dda-tab-3">Indicator Pool</a></li>
+    <li><a href="#dda-tab-4">Object Relations</a></li>
+  </ul>
+
+
+  <!-- Object Package Tab -->
+  <div id="dda-tab-1" class="l-2cr-fluid l-d-12"> 
+    <div class="c-1">
+
+      <div class="grp-module">
+        <h2>Package Meta</h2>
+        <div class="grp-row">
+	  
+        </div>
+      </div>
+
+      <div class="grp-module">
+        <h2>Observables</h2>
+	<div class="grp-row" id="dda-observable-pool"></div>
+      </div>
     </div>
     <div class="c-2">
-        <div class="grp-module">
-            <h2 id="dda-template-head"></h2>
-            <div id="dda-template-body" class="grp-row">
-                <p style="font-style: italic;">Currently None</p>
-            </div>
+      <div class="grp-module">
+        <h2>Package Contents</h2>
+        <div id="dda-package-indicators" class="grp-row">
         </div>
+      </div>
     </div>
+  </div>
+
+
+  <!-- Observable Pool Tab -->
+  <div id="dda-tab-2" class="l-2cr-fluid l-d-12"> 
+    <div class="c-1">
+      <div class="grp-module">
+        <h2>Observable Templates</h2>
+        <div class="grp-row">
+	  <div class="grp-row" id="dda-pool-elements">
+          </div>
+	</div>
+      </div>
+    </div>
+    <div class="c-2">
+      <div class="grp-module">
+        <h2 id="dda-template-head">Pool</h2>
+        <div class="grp-row" id="dda-pool-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Indicator Tab -->
+  <div id="dda-tab-3" class="l-2cr-fluid l-d-12"> 
+    <div class="grp-module">
+      <h2 class="clearfix">
+	Indicator Configuration
+	<button id="dda-indicator-add-btn" class="pull-right">Add Indicator</button>
+	<ul id="dda-indicator-add-btn-menu" style="display:none;"></ul>
+      </h2>
+      <div class="grp-row" id="dda-indicator-list"></div>
+    </div>
+  </div>
+
+
+  <!-- Object Relations Tab -->
+  <div id="dda-tab-4" class="l-2cr-fluid l-d-12"> 
+    <div class="">
+      <p>Object Relations</p>
+    </div>
+  </div>
+
+
+
+
 </div>
-<script type="application/javascript">
-    $(function() {
-        var schema = {{ schema|safe }};
-        var options = {{ options|safe }};
-        $.dingos_authoring.init(schema, options);
-    });
-</script>
+
+
+<div id="dda-observable-template-pool" style="display:none;"> 
+
+ {% for observableForm in observableForms %}
+ <div class="dda-observable-template">
+   <table>
+     {{ observableForm.as_table }} 
+   </table>
+ </div>
+ {% endfor %} 
+
+
+</div>
+
+<div id="dda-indicator-template-pool" style="display:none;"> 
+
+ {% for indicatorForm in indicatorForms %}
+ <div class="dda-indicator-template">
+   <table>
+     {{ indicatorForm.as_table }} 
+   </table>
+ </div>
+ {% endfor %} 
+
+</div>
+
 {% endblock content %}
