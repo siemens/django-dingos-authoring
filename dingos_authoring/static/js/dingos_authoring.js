@@ -418,18 +418,6 @@ $(function() {
 	    // This is basically a version of http://bl.ocks.org/benzguo/4370043
 
 
-// instance.element_registry = {
-//     '111': {
-// 	object_id: '111', relations: [{label:'test', target: '222'}]
-//     },
-//     '222': {
-// 	object_id: '222', relations: []
-//     },
-//     '333': {
-// 	object_id: '333', relations: []
-//     }
-// }
-	    
 
             var getData = function(){
 		var data_set = [];
@@ -497,8 +485,9 @@ $(function() {
 		.size([width, height])
 		.nodes(getData()) // initialize with a single node
 		.links(getLinks())
-		.linkDistance(50)
-		.charge(-200)
+		.linkDistance(200)
+		.charge(-2000)
+
 		.on("tick", tick);
 
 	    // line displayed when dragging new nodes
@@ -524,20 +513,7 @@ $(function() {
 
 	    
 
-	    // var data_set = [];
-	    // $.each(instance.element_registry, function(i,v){
-	    // 	data_set.push(v);
-	    // });
 
-
-
-
-
-
-
-
-	    // focus on svg
-	    // vis.node().focus();
 
 	    function mousedown() {
 		if (!mousedown_node && !mousedown_link) {
@@ -601,8 +577,12 @@ $(function() {
 		    .attr("x2", function(d) { return d.target.x; })
 		    .attr("y2", function(d) { return d.target.y; });
 
-		node.attr("cx", function(d) { return d.x; })
-		    .attr("cy", function(d) { return d.y; });
+		 // node.attr("cx", function(d) { return d.x; })
+		 //     .attr("cy", function(d) { return d.y; });
+node.attr("transform", function(d) {
+    return "translate(" + d.x + "," + d.y + ")"; 
+});
+
 	    }
 
 	    // rescale g
@@ -620,9 +600,9 @@ $(function() {
 		if(load){
 		    force.nodes(getData());
 		    force.links(getLinks());
-		    nodes = force.nodes();
-		    links = force.links();
 		}
+		nodes = force.nodes();
+		links = force.links();
 
 		link = link.data(links);
 
@@ -644,9 +624,9 @@ $(function() {
 
 		node = node.data(nodes);
 
-		node.enter().insert("circle")
-		    .attr("class", "node")
-		    .attr("r", 5)
+		node.enter()
+//		    .insert("circle").attr("class", "node").attr("r", 5)
+		    .insert("g").attr("class", "node").append('circle').attr('r', 30)
 		    .on("mousedown", 
 			function(d) { 
 
@@ -680,7 +660,24 @@ $(function() {
 
 				// add link
 				var link = {source: mousedown_node, target: mouseup_node};
-				links.push(link);
+
+				//check if relation already exists
+				var rel = instance.element_registry[mousedown_node.object_id].relations;
+				rel_exists=false;
+				$.each(rel, function(i,v){
+				    if(v.target==mouseup_node.object_id){
+					rel_exists = true;
+					return false;
+				    }
+				});
+
+				if(!rel_exists){
+
+				    instance.element_registry[mousedown_node.object_id].relations.push({
+					label: 'todo',
+					target: mouseup_node.object_id
+				    });
+				}
 
 				// select new link
 				selected_link = link;
@@ -691,14 +688,17 @@ $(function() {
 
 				resetMouseVars();
 				drag_line.attr("class", "drag_line_hidden");
-				instance._d3_redraw();
+				instance._d3_redraw(true);
 				return;
 			    } 
 			})
 		    .transition()
 		    .duration(750)
-		    .ease("elastic")
-		    .attr("r", 6.5);
+		    .ease("elastic");
+		    
+		//insert text label
+		node.select('text').remove();
+		node.insert('text').attr("text-anchor", "middle").text(function(d) { return d.title; })
 
 		node.exit().transition()
 		    .attr("r", 0)
@@ -706,6 +706,7 @@ $(function() {
 
 		node
 		    .classed("node_selected", function(d) { return d === selected_node; });
+
 
 		
 
@@ -749,7 +750,7 @@ $(function() {
 	    }
 
 
-	    instance._d3_redraw(true);
+	    instance._d3_redraw();
 	};
 	init_d3();
 

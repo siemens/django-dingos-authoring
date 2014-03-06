@@ -205,12 +205,21 @@ input, button {
 
 
 
-.node {
-  fill: #000;
+.node{
+//  fill: #000;
   cursor: crosshair;
 }
 
-.node_selected {
+.node circle {
+    fill: #fff;
+    stroke: #000;
+    stroke-width: 2px;
+}
+.node text {
+  pointer-events: none;
+}
+
+.node_selected circle{
   fill: #ff7f0e;
   stroke: #ff7f0e;
 }
