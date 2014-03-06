@@ -138,17 +138,16 @@ input, button {
     margin-top: 20px;
 }
 
-.dda-obs-add, .dda-obs-remove, .dda-ind-remove {
-    border-radius: 0px;
-    color: #000;
-    margin-top: 4px !important;
-}
-
-#dda-indicator-add-btn {
-    color: #000;
-    font-size: 11px;
-    border-radius: 0px;
-}
+/* .dda-obs-add, .dda-obs-remove, .dda-ind-remove { */
+/*     border-radius: 0px; */
+/*     color: #000; */
+/*     margin-top: 4px !important; */
+/* } */
+/* #dda-indicator-add-btn { */
+/*     color: #000; */
+/*     font-size: 11px; */
+/*     border-radius: 0px; */
+/* } */
 
 #dda-indicator-add-btn-menu {
     position: absolute;
@@ -175,4 +174,65 @@ input, button {
 #dda-pool-list .helptext {
     margin-top: 5px;
     display: block;
+}
+
+.dda-package_top_drop {
+    margin-bottom: 10px;
+}
+
+.dda-package_top_drop p {
+    font-style: italic;
+    text-align: center;
+    margin-top: 2px;
+    visibility: hidden;
+}
+
+.dda-dropzone-highlight.dda-package_top_drop p {
+    visibility: visible;
+}
+.dda-dropzone-hover.dda-package_top_drop p {
+    margin-top: 15px;
+}
+
+
+#relation-pane {
+    width: 100%;
+    height: 500px;
+    background-color: #fff;
+}
+
+
+
+
+
+.node {
+  fill: #000;
+  cursor: crosshair;
+}
+
+.node_selected {
+  fill: #ff7f0e;
+  stroke: #ff7f0e;
+}
+
+.drag_line {
+  stroke: #999;
+  stroke-width: 5;
+  pointer-events: none;
+}
+
+.drag_line_hidden {
+  stroke: #999;
+  stroke-width: 0;
+  pointer-events: none;
+}
+
+.link {
+  stroke: #999;
+  stroke-width: 5;
+  cursor: crosshair;
+}
+
+.link_selected {
+  stroke: #ff7f0e;
 }

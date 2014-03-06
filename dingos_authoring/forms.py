@@ -37,10 +37,10 @@ class StixIndicator(forms.Form):
         ('med', 'Medium'),
         ('low', 'Low')
     )
-    producer = forms.CharField(max_length=1024)
-    title = forms.CharField(max_length=1024)
-    description = forms.CharField(widget=forms.Textarea, required=False)
-    indicator_types = forms.CharField(max_length=1024, required=False, initial="indicator")
-    confidence = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="med")
-    object_id = forms.CharField(initial=":Indicator-", widget=forms.HiddenInput)
+    indicator_producer = forms.CharField(max_length=1024)
+    indicator_title = forms.CharField(max_length=1024)
+    indicator_description = forms.CharField(widget=forms.Textarea, required=False)
+    indicator_type = forms.CharField(max_length=1024, required=False, initial="")
+    indicator_confidence = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="med")
+    indicator_id = forms.CharField(initial=":Indicator-", widget=forms.HiddenInput)
 
