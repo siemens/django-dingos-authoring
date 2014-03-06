@@ -417,7 +417,48 @@ $(function() {
 	this.init_d3 = function(){
 	    // This is basically a version of http://bl.ocks.org/benzguo/4370043
 
-	    //$('#relation-pane').html('');
+
+// instance.element_registry = {
+//     '111': {
+// 	object_id: '111', relations: [{label:'test', target: '222'}]
+//     },
+//     '222': {
+// 	object_id: '222', relations: []
+//     },
+//     '333': {
+// 	object_id: '333', relations: []
+//     }
+// }
+	    
+
+            var getData = function(){
+		var data_set = [];
+		$.each(instance.element_registry, function(i,v){
+                    data_set.push(v);
+		});
+		return data_set;
+            };
+
+            var getLinks = function() {
+		var data_set = getData();
+		return data_set.reduce( function( initial, element) {
+                    return initial.concat( 
+			element.relations.map( function( relation) {
+                            var src, tgt;
+                            $.each(data_set, function(i,v){
+				if(v.object_id == relation.target)
+                                    tgt=i;
+				if(v.object_id == element.object_id)
+                                    src = i;
+                            });
+                            return { source : src, target : tgt};
+			})
+                    );
+		}, []);
+            };
+
+
+
 
 	    var width = $('#relation-pane').width(),
 	    height = $('#relation-pane').height(),
@@ -454,7 +495,8 @@ $(function() {
 	    // init force layout
 	    var force = d3.layout.force()
 		.size([width, height])
-		.nodes([{}]) // initialize with a single node
+		.nodes(getData()) // initialize with a single node
+		.links(getLinks())
 		.linkDistance(50)
 		.charge(-200)
 		.on("tick", tick);
@@ -468,10 +510,13 @@ $(function() {
 		.attr("y2", 0);
 
 	    // get layout properties
-	    var nodes = force.nodes(),
-	    links = force.links(),
+	    var nodes = force.nodes();
+	    var links = force.links(),
+
 	    node = vis.selectAll(".node"),
 	    link = vis.selectAll(".link");
+
+
 
 	    // add keyboard callback
 	    d3.select(window)
@@ -525,17 +570,17 @@ $(function() {
 			.attr("class", "drag_line_hidden")
 
 		    if (!mouseup_node) {
-			// add node
-			var point = d3.mouse(this),
-			node = {x: point[0], y: point[1]},
-			n = nodes.push(node);
+			// // add node
+			// var point = d3.mouse(this),
+			// node = {x: point[0], y: point[1]},
+			// n = nodes.push(node);
 
-			// select new node
-			selected_node = node;
-			selected_link = null;
+			// // select new node
+			// selected_node = node;
+			// selected_link = null;
 			
-			// add link to mousedown node
-			links.push({source: mousedown_node, target: node});
+			// // add link to mousedown node
+			// links.push({source: mousedown_node, target: node});
 		    }
 
 		    instance._d3_redraw();
@@ -571,7 +616,13 @@ $(function() {
 	    }
 
 	    // redraw force layout
-	    instance._d3_redraw = function(){
+	    instance._d3_redraw = function(load=false){
+		if(load){
+		    force.nodes(getData());
+		    force.links(getLinks());
+		    nodes = force.nodes();
+		    links = force.links();
+		}
 
 		link = link.data(links);
 
@@ -637,7 +688,11 @@ $(function() {
 
 				// enable zoom
 				vis.call(d3.behavior.zoom().on("zoom", rescale));
+
+				resetMouseVars();
+				drag_line.attr("class", "drag_line_hidden");
 				instance._d3_redraw();
+				return;
 			    } 
 			})
 		    .transition()
@@ -694,7 +749,7 @@ $(function() {
 	    }
 
 
-	    instance._d3_redraw();
+	    instance._d3_redraw(true);
 	};
 	init_d3();
 
@@ -712,7 +767,7 @@ $(function() {
 		b.init_observable_pool();
 	    }
 	    if(ui.newTab.index()==3){
-		b._d3_redraw();
+		b._d3_redraw(true);
 	    }
         }
     });
