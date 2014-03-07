@@ -155,7 +155,7 @@ $(function() {
 
 	    div.append(
 		$('<button>').addClass('dda-obs-remove pull-right').html('Remove').click(function(){
-		    instance.removeElementFromPool(guid);
+		    instance.removeElementFromPool(div.data('id'));
 		})
 	    ).append(
 		$('<button>').addClass('dda-obs-add pull-right').html('Toggle').click(function(){
@@ -187,6 +187,14 @@ $(function() {
 	this.removeElementFromPool = function(guid){
 	    instance.element_registry[guid].pool_element.remove();
 	    delete instance.element_registry[guid];
+	    $.each(instance.indicator_registry, function(i,v){
+		ni = [];
+		$.each(v.observables, function(i1,v1){
+		    if(v1!=guid)
+			ni.push(v1)
+		});
+		instance.indicator_registry[i].observables = ni;
+	    });
 	};
 	
 	this.getElementName = function(v, def){
@@ -576,7 +584,7 @@ $(function() {
 				if(!rel_exists){
 
 				    instance.element_registry[mousedown_node.object_id].relations.push({
-					label: 'todo',
+					label: $('input[name="dda-selected-relation"]:checked').val(),
 					target: mouseup_node.object_id
 				    });
 				}
@@ -681,6 +689,11 @@ $(function() {
 
     $('button').button();
 
+    $('#dda-relation-list > .dda-add-element').click(function(){
+	$('#dda-relation-list').find('.dda-rel-selected').removeClass('dda-rel-selected').find('input:checked').prop('checked', false);
+	$(this).addClass('dda-rel-selected').find('input:radio').prop('checked', true);
+	
+    });
 
 
 });
