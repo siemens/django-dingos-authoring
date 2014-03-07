@@ -40,6 +40,11 @@
         </div>
       </div>
     </div>
+
+    <div id="dda-gen-output" class="grp-module" style="display:none;margin-top:3em;">
+      <h2>Package Output</h2>
+      <pre></pre>
+    </div>
   </div>
 
 
@@ -82,7 +87,11 @@
         <h2>Relation Type</h2>
         <div class="grp-row" id="dda-relation-list">
 	  {% for rel in relations %}
-	    <div class="dda-add-element"><input type="radio"  name="dda-selected-relation" value="{{ rel.value}}" style="display:none;"><h3>{{ rel.label }}</h3><p>{{ rel.description }}</p></div>
+	     {% if forloop.first %} 
+<div class="dda-add-element dda-rel-selected"><input type="radio"  name="dda-selected-relation" value="{{ rel.value}}" style="display:none;" checked="true"><h3>{{ rel.label }}</h3><p>{{ rel.description }}</p></div>
+	     {% else %}
+<div class="dda-add-element"><input type="radio"  name="dda-selected-relation" value="{{ rel.value}}" style="display:none;"><h3>{{ rel.label }}</h3><p>{{ rel.description }}</p></div>
+	     {% endif %}	  
 	  {% endfor %}
 	</div>
       </div>

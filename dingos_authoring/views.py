@@ -7,12 +7,15 @@ from dingos.models import InfoObject
 from django.db.models import Q
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME
 from dingos.view_classes import BasicListView
+from django.views.generic import View
+
 
 from libmantis import *
 from mantis_client import utils
-from mantis_client.mantis_templates import indicators as mantis_indicators
+from mantis_client.transformer import Transformer
 
 import forms as observables
+from operator import itemgetter
 
 
 def index(request):
@@ -52,7 +55,7 @@ def index(request):
         {'label': 'Installed', 'value': 'Installed', 'description': 'Specifies that this object installed the related object.'},
         {'label': 'Connected_To', 'value': 'Connected_To', 'description': 'Specifies that this object connected to the related object.'},
         {'label': 'FQDN_Of', 'value': 'FQDN_Of', 'description': 'Specifies that this object is an FQDN of the related object.'},
-        {'label': 'Characterizes', 'value': '', 'description': 'Specifies that this object describes the properties of the related object. This is most applicable in cases where the related object is an Artifact Object and this object is a non-Artifact Object.'},
+        {'label': 'Characterizes', 'value': 'Characterizes', 'description': 'Specifies that this object describes the properties of the related object. This is most applicable in cases where the related object is an Artifact Object and this object is a non-Artifact Object.'},
         {'label': 'Used', 'value': 'Used', 'description': 'Specifies that this object used the related object.'},
         {'label': 'Redirects_To', 'value': 'Redirects_To', 'description': 'Specifies that this object redirects to the related object.'}
     ]
@@ -60,10 +63,37 @@ def index(request):
     return render_to_response('dingos_authoring/index.html',{
         'observableForms': observableForms,
         'indicatorForms': indicatorForms,
-        'relations': relations
+        'relations': sorted(relations, key=itemgetter('label'))
     })
     
 
+
+
+class transform(View):
+    def post(self, request, *args, **kwargs):
+        res = {}
+        POST = request.POST
+        if POST.has_key(u'j'):
+            j = None
+            try:
+                j = json.loads(POST[u'j'])
+            except:
+                pass
+            if not j:
+                return HttpResponse('{}', content_type="application/json")
+
+        logger = utils.createLogger("logger")
+        tr = Transformer(logger)
+        tr.create_observables(j.get('observables', {}))
+        tr.create_indicators(j.get('indicators', {}))
+        tr.create_incidents(j.get('incidents', {}))
+        
+        stix_dict = tr.create_stix_dict(j.get("stix_header",{}))
+        stix_obj = tr.create_STIX_xml_from_Dict(stix_dict)
+        
+        res['xml'] = stix_obj['stix_xml']
+
+        return HttpResponse(json.dumps(res), content_type="application/json")
 
 
 class ref(BasicListView):
@@ -112,3 +142,6 @@ class ref(BasicListView):
         return HttpResponse(content,
                             content_type='application/json',
                             **httpresponse_kwargs)
+
+
+

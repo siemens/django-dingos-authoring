@@ -1,12 +1,55 @@
 $(function() {
 
+    function getCookie(name) {
+	var cookieValue = null;
+	if (document.cookie && document.cookie != '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+		var cookie = jQuery.trim(cookies[i]);
+		// Does this cookie string begin with the name we want?
+		if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+		}
+            }
+	}
+	return cookieValue;
+    }
+
+    function csrfSafeMethod(method) {
+	// these HTTP methods do not require CSRF protection
+	return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+    }
+    function sameOrigin(url) {
+	// test that a given url is a same-origin URL
+	// url could be relative or scheme relative or absolute
+	var host = document.location.host; // host + port
+	var protocol = document.location.protocol;
+	var sr_origin = '//' + host;
+	var origin = protocol + sr_origin;
+	// Allow absolute or scheme relative URLs to same origin
+	return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
+            (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
+            // or any other URL that isn't scheme relative or absolute i.e relative.
+            !(/^(\/\/|http:|https:).*/.test(url));
+    }
+    $.ajaxSetup({
+	beforeSend: function(xhr, settings) {
+            if (!csrfSafeMethod(settings.type) && sameOrigin(settings.url)) {
+		// Send the token to same-origin, relative URLs only.
+		// Send the token only if the method warrants CSRF protection
+		// Using the CSRFToken value acquired earlier
+		xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+            }
+	}
+    });
 
     function s4() {
 	return Math.floor((1 + Math.random()) * 0x10000)
             .toString(16)
             .substring(1);
     };
-    function guid_gen() {
+    function guid_gen(){
 	return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
             s4() + '-' + s4() + s4() + s4();
     };
@@ -60,7 +103,7 @@ $(function() {
 			})
 		);
 
-		var title = $('#id_xsi_type',v).val();
+		var title = $('#id_object_type',v).val();
 		var description = '';
 		
 		div.append('<h3>'+title+'</h3>');
@@ -95,16 +138,21 @@ $(function() {
 	};
 	this.init_indicator_tab();
 
-	// adds an indicator to the pool. gets passed the template of the indicator.
-	// presented as function so we can add an indicator on demand if a user drops an observable in a package
-	// if v is not passed, the function uses the first found template
+	// adds an indicator to the pool. gets passed the template of
+	// the indicator. if v is not passed (in case user drops
+	// observable in package, the indicator shoud get generated),
+	// the function uses the first found template
 	this._add_indicator = function(v){
 	    var auto_gen = false;
 	    if(!v){ // When user clicked the button
 		v = instance.pool_indicator_templates.first();
 		auto_gen = true;
 	    }
-	    var guid = guid_gen();
+
+	    // Get a new ID
+	    var guid = 'siemens_cert:' + $(v).find('#id_indicator_id').val() + '-' + guid_gen();
+
+	    // Create container element
 	    var div = $('<div class="dda-add-element"></div>');
 	    div.append(
 		$('<button></button>').html('Remove').addClass("dda-ind-remove pull-right").click(function(){
@@ -112,13 +160,15 @@ $(function() {
 		})
 	    );
 	    div.append('<h3>' + guid + '</h3>');
+
+	    // Create element from template
 	    var _pc_el = $(v).clone().attr('id', guid);
-	    var _oi = _pc_el.find('#id_indicator_id');
-	    //Prepend namespace and append guid; TODO: namespace?
-	    _oi.val('siemens_cert' + _oi.val() + guid);
+
+	    // Insert the element in the DOM
 	    div.append(_pc_el);
 	    instance.indicator_list.prepend(div);
 
+	    // Register the object internally
 	    instance.indicator_registry[guid] = {
 		template: $(v),
 		element: _pc_el,
@@ -144,13 +194,18 @@ $(function() {
 
 	// Adds an element to the observable pool. Gets passed the template element
 	this.addElementToPool = function(element){
-	    //Some new id
+
+	    // Get a new id
 	    guid = guid_gen();
-	    var div = $('<div class="dda-add-element clearfix" ></div>').data('id', guid);
-	    var new_elem = $(element).clone().attr('id', guid);
-	    var _oi = new_elem.find('#id_object_id');
-	    //Prepend namespace and append guid; TODO: namespace?
-	    _oi.val('siemens_cert' + _oi.val() + guid);
+	    guid_observable = 'siemens_cert:Observable-' + guid;
+	    guid_object = 'siemens_cert:' + $(element).find('#id_object_type').val() + '-' + guid;
+
+	    // Create new container element
+	    var div = $('<div class="dda-add-element clearfix" ></div>').data('id', guid_observable);
+	    
+	    // Create element from template
+	    var new_elem = $(element).clone().attr('id', guid_object);
+	    new_elem.find('#id_object_id').val(guid_object);
 	    var _pc_el = $('<div class="dda-pool-element">').append(new_elem);
 
 	    div.append(
@@ -163,7 +218,7 @@ $(function() {
 		})
 	    );
 
-	    var title = $('#id_xsi_type', element).val();
+	    var title = $('#id_object_type', element).val();
 	    var description = '';
 
 	    div.append('<h3>'+guid +'</h3><p>'+title+'</p>');
@@ -172,39 +227,58 @@ $(function() {
 	    instance.pool_list.prepend(div);
 
 	    
-	    instance.element_registry[guid] = {
-		object_id: guid,
+	    instance.element_registry[guid_observable] = {
+		object_id: guid_observable,
+		guid_object: guid_object,
+		guid: guid,
 		relations: [],
 	    	template: $(element),
 		element: _pc_el,
 		pool_element: div,
 		title: title,
 		description: description,
-		type: $(element).find('#id_xsi_type').val()
+		type: $(element).find('#id_object_type').val()
 	    };
 	};
 
 	this.removeElementFromPool = function(guid){
-	    instance.element_registry[guid].pool_element.remove();
-	    delete instance.element_registry[guid];
+
+	    //remove from indicators
 	    $.each(instance.indicator_registry, function(i,v){
-		ni = [];
+		var ni = [];
 		$.each(v.observables, function(i1,v1){
 		    if(v1!=guid)
-			ni.push(v1)
+			ni.push(v1);
 		});
 		instance.indicator_registry[i].observables = ni;
 	    });
+
+	    //remove relation information
+	    $.each(instance.element_registry, function(i,v){
+		var ni = [];
+		$.each(v.relations, function(i1,v1){
+		    if(v1.target!=guid)
+			ni.push(v1);
+		});
+		instance.element_registry[i].relations = ni;
+		
+	    });
+
+	    //remove element itself
+	    instance.element_registry[guid].pool_element.remove();
+	    delete instance.element_registry[guid];
 	};
 	
 	this.getElementName = function(v, def){
 	    desc = '';
-	    if(v.type == 'FileObj:FileObjectType')
+	    if(v.type == 'File')
 		desc = $(v.element).find('#id_file_name').val();
-	    else if(v.type == 'EmailMessageObj:EmailMessageObjectType')
+	    else if(v.type == 'EmailMessage')
 		desc = $(v.element).find('#id_subject').val();
-	    else if(v.type == 'DNSRecordObj:DNSRecordObjectType')
+	    else if(v.type == 'DNSRecord')
 		desc = $(v.element).find('#id_domain_name').val();
+	    else if(v.type == 'Address')
+		desc = $(v.element).find('#id_ip_addr').val();
 
 	    if(desc=='')
 		desc = def;
@@ -299,8 +373,6 @@ $(function() {
 		    'observables': []
 		}
 		$.each(instance.indicator_registry, function(i,v){
-		    //stix_base.indicators[i] = $(v.element).find('input, select, textarea').serializeObject();
-		    //stix_base.indicators[i].observables = v.observables;
 		    var tmp = $(v.element).find('input, select, textarea').serializeObject();
 		    tmp.related_observables = v.observables;
 		    tmp.related_observables_condition = 'AND';
@@ -315,15 +387,25 @@ $(function() {
 			'related_observables': {},
 			'observable_properties': $(v.element).find('input, select, textarea').serializeObject()
 		    }
+
 		    $.each(v.relations, function(i,v){
 			tmp.related_observables[v.target] = v.label;
 		    });
 		    stix_base.observables.push(tmp);
 		});
 
-		result = JSON.stringify(stix_base, null, "    ");
-		console.log(result);
+		//result = JSON.stringify(stix_base, null, "    ");
+		//console.log(result);
 
+		$('#dda-gen-output').slideUp('fast',function(){		    
+		    $.post('transform', {'j':JSON.stringify(stix_base)}, function(data){
+			$('#dda-gen-output pre').text('');
+			if(data.xml !== undefined){
+			    $('#dda-gen-output pre').text(data.xml);
+			    $('#dda-gen-output').slideDown('fast');
+			}
+		    }, 'json');
+		});
 		return false;
 	    });
 
@@ -358,6 +440,41 @@ $(function() {
 		}, []);
             };
 
+	    var getLabelAnchors = function(){
+		var data_set = [];
+		$.each(instance.element_registry, function(i,v){
+		    // Push twice for object pairs; Link will then be like 0,1 - 2,3 - 4,5
+                    data_set.push({
+			node: v,
+			x: v.x,
+			y: v.y,
+			px: v.px,
+			py: v.py
+		    });
+		    data_set.push({
+			node : v,
+			x: v.x,
+			y: v.y,
+			px: v.px,
+			py: v.py
+		    });
+		});
+		return data_set;
+	    };
+
+	    var getLabelAnchorLinks = function(){
+		var node_set = [];
+		var c = 0;
+		$.each(instance.element_registry, function(i,v){
+		    node_set.push({
+			source : c * 2,
+			target : c * 2 + 1
+		    });
+		    c++;
+		});
+		return node_set;
+	    };
+
 	    var width = $('#relation-pane').width(),
 	    height = $('#relation-pane').height(),
 	    fill = d3.scale.category10();
@@ -375,10 +492,11 @@ $(function() {
 		.attr("height", height)
 		.attr("pointer-events", "all");
 
+	    var zoom = d3.behavior.zoom().on("zoom", rescale);
 
 	    var vis = outer
 		.append('svg:g')
-		.call(d3.behavior.zoom().on("zoom", rescale))
+		.call(zoom)
 		.on("dblclick.zoom", null)
 		.append('svg:g')
 		.on("mousemove", mousemove)
@@ -390,15 +508,27 @@ $(function() {
 		.attr('height', height)
 		.attr('fill', 'white');
 
-	    // init force layout
+	    // init force layout for nodes
 	    var force = d3.layout.force()
 		.size([width, height])
 		.nodes(getData()) // initialize with a single node
 		.links(getLinks())
 		.linkDistance(200)
-		.charge(-2000)
-
+		.charge(-1000)
+//.gravity(1).linkDistance(200).charge(-3000)
 		.on("tick", tick);
+
+	    // force layout for labels
+	    var force2 = d3.layout.force()
+	    	.nodes(getLabelAnchors())
+	    	.links(getLabelAnchorLinks())
+	    	.gravity(0)
+	    	.linkDistance(0)
+	    	.linkStrength(0.7)
+	    	.charge(-100)
+//.linkDistance(0).linkStrength(0.7).charge(-100)
+	    	.size([width, height]);
+
 
 	    // line displayed when dragging new nodes
 	    var drag_line = vis.append("line")
@@ -410,18 +540,19 @@ $(function() {
 
 	    // get layout properties
 	    var nodes = force.nodes();
-	    var links = force.links(),
+	    var links = force.links();
+	    var labelAnchors = force2.nodes();
+	    var labelLinks = force2.links();
 
-	    node = vis.selectAll(".node"),
-	    link = vis.selectAll(".link");
-
+	    node = vis.selectAll('.node'),
+	    link = vis.selectAll('.link');
+	    labelAnchor = vis.selectAll('.labelAnchor');
+	    labelLink = vis.selectAll('.labelLink');
 
 
 	    // add keyboard callback
 	    d3.select(window)
 		.on("keydown", keydown);
-
-	    
 
 
 
@@ -456,17 +587,7 @@ $(function() {
 			.attr("class", "drag_line_hidden")
 
 		    if (!mouseup_node) {
-			// // add node
-			// var point = d3.mouse(this),
-			// node = {x: point[0], y: point[1]},
-			// n = nodes.push(node);
-
-			// // select new node
-			// selected_node = node;
-			// selected_link = null;
-			
-			// // add link to mousedown node
-			// links.push({source: mousedown_node, target: node});
+			// no target node
 		    }
 
 		    instance._d3_redraw();
@@ -481,18 +602,59 @@ $(function() {
 		mousedown_link = null;
 	    }
 
-	    function tick() {
-		link.attr("x1", function(d) { return d.source.x; })
-		    .attr("y1", function(d) { return d.source.y; })
-		    .attr("x2", function(d) { return d.target.x; })
-		    .attr("y2", function(d) { return d.target.y; });
 
-		// node.attr("cx", function(d) { return d.x; })
-		//     .attr("cy", function(d) { return d.y; });
-		node.attr("transform", function(d) {
-		    return "translate(" + d.x + "," + d.y + ")"; 
+	    var updateLink = function() {
+		this.attr("x1", function(d) {
+		    return d.source.x;
+		}).attr("y1", function(d) {
+		    return d.source.y;
+		}).attr("x2", function(d) {
+		    return d.target.x;
+		}).attr("y2", function(d) {
+		    return d.target.y;
 		});
 
+	    }
+
+	    var updateNode = function() {
+		this.attr("transform", function(d) {
+		    return "translate(" + d.x + "," + d.y + ")";
+		});
+	    }
+
+	    function tick() {
+		
+		// Correct position of the nodes
+		node.call(updateNode);
+		labelAnchor.each(function(d,i){
+		    if(i % 2 == 0) {
+			d.x = d.node.x;
+			d.y = d.node.y;
+		    } else {
+			var _b = this.childNodes[0];
+			try{
+			    var b = _b.getBBox();
+			}catch(e){
+			    return;
+			}
+
+			var diffX = d.x - d.node.x;
+			var diffY = d.y - d.node.y;
+
+			var dist = Math.sqrt(diffX * diffX + diffY * diffY);
+
+			var shiftX = b.width * (diffX - dist) / (dist * 2);
+			shiftX = Math.max(-b.width, Math.min(0, shiftX));
+			var shiftY = 5;
+
+			this.childNodes[0].setAttribute("transform", "translate(" + shiftX + "," + shiftY + ")");
+		    }
+		});
+		labelAnchor.call(updateNode);
+		
+		// Correct position of links
+		link.call(updateLink);
+		labelLink.call(updateLink);
 	    }
 
 	    // rescale g
@@ -500,22 +662,41 @@ $(function() {
 		trans=d3.event.translate;
 		scale=d3.event.scale;
 
-		vis.attr("transform",
-			 "translate(" + trans + ")"
-			 + " scale(" + scale + ")");
+		vis.attr("transform", "translate(" + trans + ") scale(" + scale + ")");
 	    }
 
 	    // redraw force layout
-	    instance._d3_redraw = function(load=false){
+	    instance._d3_redraw = function(load){
+		if(typeof(load)==='undefined') load = false;
 		if(load){
 		    force.nodes(getData());
 		    force.links(getLinks());
+		    force2.nodes(getLabelAnchors());
+		    force2.links(getLabelAnchorLinks());
+		    //reset zoom
+		    zoom.scale(1);
+		    zoom.translate([0,0])
+		    vis.transition().duration(200).attr('transform', 'translate(' + zoom.translate() + ') scale(' + zoom.scale() + ')')
 		}
 		nodes = force.nodes();
 		links = force.links();
+		labelAnchors = force2.nodes();
+		labelLinks = force2.links();
+
+
+		labelLink = labelLink.data(labelLinks);
+		labelLink.exit().remove();
+
+
+		labelAnchor = labelAnchor.data(labelAnchors);
+		labelAnchor.enter().insert('g').attr('class', 'labelAnchor').append('text').text(function(d, i) {
+		    return i % 2 == 0 ? "" : d.node.title
+		}).style("fill", "#555").style("font-family", "Arial").style("font-size", 12);
+		labelAnchor.exit().remove();
+
+
 
 		link = link.data(links);
-
 		link.enter().insert("line", ".node")
 		    .attr("class", "link")
 		    .on("mousedown", 
@@ -523,20 +704,25 @@ $(function() {
 			    mousedown_link = d; 
 			    if (mousedown_link == selected_link) selected_link = null;
 			    else selected_link = mousedown_link; 
+			    if(selected_link!==null){
+				//select the relation type from the list
+				$.each(selected_link.source.relations, function(i,v){
+				    if(v.target==selected_link.target.object_id){
+					$('input[value="'+v.label+'"]').parent('.dda-add-element').click();
+				    }
+				});
+			    }
 			    selected_node = null; 
 			    instance._d3_redraw(); 
 			})
 
 		link.exit().remove();
 
-		link
-		    .classed("link_selected", function(d) { return d === selected_link; });
+		link.classed("link_selected", function(d) { return d === selected_link; });
 
 		node = node.data(nodes);
-
 		node.enter()
-//		    .insert("circle").attr("class", "node").attr("r", 5)
-		    .insert("g").attr("class", "node").append('circle').attr('r', 30).attr('style', function(d){return 'fill:'+fill(d.title)+';opacity:0.7;'})
+		    .insert("g").attr("class", "node").append('circle').attr('r', 10).attr('style', function(d){return 'fill:'+fill(d.title)+';opacity:0.7;'})
 		    .on("mousedown", 
 			function(d) { 
 
@@ -600,19 +786,12 @@ $(function() {
 				drag_line.attr("class", "drag_line_hidden");
 				instance._d3_redraw(true);
 				return;
-			    } 
+			    }
 			})
 		    .transition()
-		    .duration(750)
+		    .duration(500)
 		    .ease("elastic");
-		    
-		//insert text label
-		node.select('text').remove();
-		node.insert('text').attr("text-anchor", "middle").text(function(d) { 
-		    var ta = d.title.split(':')
-		    var en = instance.getElementName(d, ta[1]);
-		    return en;
-		});
+
 
 		node.exit().transition()
 		    .attr("r", 0)
@@ -631,7 +810,7 @@ $(function() {
 		}
 
 		force.start();
-
+		force2.start();
 	    }
 
 	    function spliceLinksForNode(node) {
@@ -676,7 +855,7 @@ $(function() {
     var b = builder();
 
     $('#dda-container-tabs').tabs({
-	active: 3,
+	active: 1,
 	activate:function(event,ui){
 	    if(ui.newTab.index()==0){
 		b.init_observable_pool();
