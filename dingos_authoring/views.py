@@ -61,6 +61,7 @@ def index(request):
     ]
 
     return render_to_response('dingos_authoring/index.html',{
+        'title': 'Mantis Authoring',
         'observableForms': observableForms,
         'indicatorForms': indicatorForms,
         'relations': sorted(relations, key=itemgetter('label'))

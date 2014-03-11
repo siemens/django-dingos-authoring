@@ -126,17 +126,34 @@ input, button {
     margin-bottom: 15px;
 }
 
-#dda-indicator-list > .dda-add-element table, #dda-pool-list > .dda-add-element table{
+.dda-add-element table, .dda-observable-template table{
     width: 100%;
 }
 #dda-indicator-list > .dda-add-element table textarea, #dda-pool-list > .dda-add-element table textarea {
     width: 100%;
-    resize: none;
+    resize: vertical;
 }
 
 #dda-pool-list .dda-pool-element {
     margin-top: 20px;
 }
+
+.dda-observable-template input, 
+.dda-indicator-template input, 
+.dda-add-element input {
+    width: 100%;
+}
+.dda-observable-template textarea, 
+.dda-indicator-template textarea,
+.dda-add-element textarea{
+    width: 100%;
+    resize: vertical;
+    min-height: 40px;
+}
+.dda-indicator-template textarea {
+    min-height: 120px;
+}
+
 
 /* .dda-obs-add, .dda-obs-remove, .dda-ind-remove { */
 /*     border-radius: 0px; */
@@ -164,7 +181,7 @@ input, button {
 .dda-dropzone-hover {
   background-color: #EEEEEE;
   border: 1px dashed #888888;
-  height: 50px;
+  min-height: 50px;
 }
 
 #dda-package-indicators .dda-add-element {
@@ -208,7 +225,6 @@ input, button {
 }
 
 .node{
-//  fill: #000;
   cursor: crosshair;
 }
 
@@ -240,10 +256,23 @@ input, button {
 
 .link {
   stroke: #999;
-  stroke-width: 5;
+  stroke-width: 2.5px;
   cursor: crosshair;
+  fill: none;
 }
 
 .link_selected {
-  stroke: #ff7f0e;
+  stroke: #ff7f0e !important;
+}
+
+.ui-widget-overlay {
+    background:none;
+}
+
+#dda-show-json-edit, #dda-import-json-edit {
+    width: 100%;
+    height: 100%;
+}
+#dda-import-json-edit {
+    margin-bottom: -40px;
 }

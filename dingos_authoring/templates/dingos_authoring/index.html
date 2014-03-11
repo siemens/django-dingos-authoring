@@ -22,7 +22,6 @@
 	  <input type="text" name="stix_header_title" placeholder="Title">
 	  <input type="text" name="stix_header_description" placeholder="Description">
 	  <select name="stix_header_tlp"><option value="white">White</option><option value="green">Green</option><option value="amber">Amber</option><option value="red">Red</option></select>
-	  <input type="hidden" name="stix_header_produced_time">
 	  <hr>
 	  <button id="dda-stix-generate">Generate</button>
         </div>
@@ -61,7 +60,7 @@
     </div>
     <div class="c-2">
       <div class="grp-module">
-        <h2 id="dda-template-head">Pool</h2>
+        <h2 id="dda-template-head" class="clearfix">Pool <button id="dda-template-head-toogle" class="pull-right">Toggle All</button> </h2>
         <div class="grp-row" id="dda-pool-list"></div>
       </div>
     </div>
@@ -98,6 +97,10 @@
     </div>
     <div class="c-2">
       <div id="relation-pane"></div>
+      <div class="grp-module">
+	<h2>Object Properties</h2>
+	<div id="dda-relation-object-details" class="grp-row"></div>
+      </div>
     </div>
   </div>
 
@@ -108,28 +111,24 @@
 
 
 <div id="dda-observable-template-pool" style="display:none;"> 
-
  {% for observableForm in observableForms %}
- <div class="dda-observable-template">
+ <div class="dda-observable-template" id="dda-observable-template_{{ observableForm.object_type.value }}">
    <table>
      {{ observableForm.as_table }} 
    </table>
  </div>
  {% endfor %} 
-
-
 </div>
 
-<div id="dda-indicator-template-pool" style="display:none;"> 
 
+<div id="dda-indicator-template-pool" style="display:none;"> 
  {% for indicatorForm in indicatorForms %}
- <div class="dda-indicator-template">
+ <div class="dda-indicator-template"  id="dda-indicator-template_{{ indicatorForm.indicator_type.value }}">
    <table>
      {{ indicatorForm.as_table }} 
    </table>
  </div>
  {% endfor %} 
-
 </div>
 
 {% endblock content %}

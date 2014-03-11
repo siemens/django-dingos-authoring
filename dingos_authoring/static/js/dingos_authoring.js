@@ -1,4 +1,4 @@
-$(function() {
+ $(function() {
 
     function getCookie(name) {
 	var cookieValue = null;
@@ -98,8 +98,14 @@ $(function() {
 	    $.each(instance.pool_elements_templates, function(i,v){
 		var div = $('<div class="dda-add-element clearfix" ></div>');
 		div.append(
+		    $('<object></object>').attr('data', $(v).find('#id_icon').val())
+		    .attr('type', 'image/svg+xml')
+		    .addClass('pull-left')
+			.css({'width': '30px', 'margin-right': '5px'})
+		);
+		div.append(
 			$('<button>').addClass('dda-obs-add pull-right').html('Add').click(function(){
-			    instance.addElementToPool(v);
+			    instance.addElementToPool($(v).attr('id'));
 			})
 		);
 
@@ -112,8 +118,20 @@ $(function() {
 		instance.pool_elements.append(div);
 	    });
 
+	    instance._pc_el_shown=true;
+	    $('#dda-template-head-toogle').click(function(){
+		if(instance._pc_el_shown)
+		    $('.dda-pool-element', '#dda-pool-list').parent().hide();
+		else
+		    $('.dda-pool-element', '#dda-pool-list').parent().show();
+		instance._pc_el_shown = !instance._pc_el_shown;
+	    });
+
 	};
 	this.init_pool_elements();
+
+
+
 
 
 	// Initializes the indicator tab.
@@ -138,107 +156,137 @@ $(function() {
 	};
 	this.init_indicator_tab();
 
-	// adds an indicator to the pool. gets passed the template of
-	// the indicator. if v is not passed (in case user drops
-	// observable in package, the indicator shoud get generated),
-	// the function uses the first found template
-	this._add_indicator = function(v){
+
+
+	// adds an indicator to the pool. gets passed the template id
+	// of the indicator. if template_id is not passed (in case
+	// user drops observable in package, the indicator shoud get
+	// generated), the function uses the first found template
+	this._add_indicator = function(template_id, guid_passed){
 	    var auto_gen = false;
-	    if(!v){ // When user clicked the button
-		v = instance.pool_indicator_templates.first();
+	    var template = false;
+
+	    if(!template_id){ // When user clicked the button
+		template = instance.pool_indicator_templates.first();
+		template_id = template.attr('id');
 		auto_gen = true;
+	    }else{
+		$.each(instance.pool_indicator_templates, function(i,v){
+		    if($(v).attr('id')==template_id){
+			template = v;
+			return false;
+		    }
+		});
+	    }
+	    if(template===false){
+		//TODO: template not found;
+		template = $();
 	    }
 
-	    // Get a new ID
-	    var guid = 'siemens_cert:' + $(v).find('#id_indicator_id').val() + '-' + guid_gen();
+	    // Get a new ID or use supplied one
+	    var guid = guid_gen();
+	    var guid_indicator = 'siemens_cert:' + template.find('#id_indicator_type').val() + '-' + guid;
 
+	    if(guid_passed)
+		guid_indicator = guid_passed;
+
+
+	    // Create element from template
+	    var _pc_el = template.clone().attr('id', guid_indicator);
+
+		
 	    // Create container element
 	    var div = $('<div class="dda-add-element"></div>');
 	    div.append(
-		$('<button></button>').html('Remove').addClass("dda-ind-remove pull-right").click(function(){
-		    instance.removeIndicator(guid);
-		})
+		$('<div class="clearfix" style="margin-bottom:5px;"></div>').append(
+		    $('<button>Remove</button>').button().addClass("dda-ind-remove pull-right").click(function(){
+			instance.removeIndicator(guid_indicator);
+		    }),
+		    $('<h3>' + guid_indicator + '</h3>').click(function(){
+			_pc_el.toggle();
+		    })
+		)
 	    );
-	    div.append('<h3>' + guid + '</h3>');
-
-	    // Create element from template
-	    var _pc_el = $(v).clone().attr('id', guid);
 
 	    // Insert the element in the DOM
 	    div.append(_pc_el);
 	    instance.indicator_list.prepend(div);
 
 	    // Register the object internally
-	    instance.indicator_registry[guid] = {
-		template: $(v),
-		element: _pc_el,
-		pool_element: div,
-		title: guid,
-		description: $(v).data('description'),
+	    instance.indicator_registry[guid_indicator] = {
+		template: template_id,
+		object_id: guid_indicator,
+		element: div,
+		description: template.data('description'),
 		observables: []
 	    };
 
 	    if(!auto_gen){
-		//instance.renderPackage();
+		//instance.render_stix_tab();
 		$('#dda-indicator-add-btn-menu').toggle();
 	    }else{
-		return guid;
+		return guid_indicator;
 	    }
 	};
 	this.removeIndicator = function(guid){
-	    instance.indicator_registry[guid].pool_element.remove();
+	    instance.indicator_registry[guid].element.remove();
 	    delete instance.indicator_registry[guid];
-	    instance.renderPackage();
+	    instance.render_stix_tab();
 	};
 
 
-	// Adds an element to the observable pool. Gets passed the template element
-	this.addElementToPool = function(element){
+
+
+
+
+	/*
+	 * Adds an element to the observable pool. Gets passed the template element
+	 */
+	this.addElementToPool = function(template_id, guid_passed){
+	    var template = $('#' + template_id);
 
 	    // Get a new id
 	    guid = guid_gen();
 	    guid_observable = 'siemens_cert:Observable-' + guid;
-	    guid_object = 'siemens_cert:' + $(element).find('#id_object_type').val() + '-' + guid;
+	    if(guid_passed)
+		guid_observable = guid_passed;
 
 	    // Create new container element
 	    var div = $('<div class="dda-add-element clearfix" ></div>').data('id', guid_observable);
 	    
 	    // Create element from template
-	    var new_elem = $(element).clone().attr('id', guid_object);
-	    new_elem.find('#id_object_id').val(guid_object);
-	    var _pc_el = $('<div class="dda-pool-element">').append(new_elem);
+	    var new_elem = template.clone().attr('id', guid_observable);
+	    var _pc_el = $('<div></div>').append( //container for toggling
+		$('<input type="text" name="dda-observable-title" placeholder="Observable Title"><textarea name="dda-observable-description" placeholder="Observable Description"></textarea>'),
+		$('<div class="dda-pool-element">').append(new_elem)
+	    );
 
 	    div.append(
 		$('<button>').addClass('dda-obs-remove pull-right').html('Remove').click(function(){
 		    instance.removeElementFromPool(div.data('id'));
 		})
-	    ).append(
-		$('<button>').addClass('dda-obs-add pull-right').html('Toggle').click(function(){
-		    _pc_el.toggle();
-		})
-	    );
+	    ).append($('<h3>'+guid_observable +'</h3>').click(function(){
+		_pc_el.toggle();
+	    }));
 
-	    var title = $('#id_object_type', element).val();
+	    var title = $('#id_object_type', template).val();
 	    var description = '';
-
-	    div.append('<h3>'+guid +'</h3><p>'+title+'</p>');
+	    
+	    div.append('<p>'+title+'</p>');
 	    div.append( _pc_el );
 	    div.find('button').button();
 	    instance.pool_list.prepend(div);
 
 	    
 	    instance.element_registry[guid_observable] = {
-		object_id: guid_observable,
-		guid_object: guid_object,
-		guid: guid,
+		observable_id: guid_observable,
 		relations: [],
-	    	template: $(element),
-		element: _pc_el,
-		pool_element: div,
-		title: title,
+	    	template: template_id,
+		element: div,
 		description: description,
-		type: $(element).find('#id_object_type').val()
+		type: template.find('#id_object_type').val()
 	    };
+
 	};
 
 	this.removeElementFromPool = function(guid){
@@ -265,32 +313,117 @@ $(function() {
 	    });
 
 	    //remove element itself
-	    instance.element_registry[guid].pool_element.remove();
+	    instance.element_registry[guid].element.remove();
 	    delete instance.element_registry[guid];
 	};
-	
-	this.getElementName = function(v, def){
+
+
+
+	/*
+	 * Helper function which returns a display name for a specific object
+	 */
+	this.getElementName = function(v, def, trim){
+	    trim=trim||60;
+
 	    desc = '';
-	    if(v.type == 'File')
-		desc = $(v.element).find('#id_file_name').val();
-	    else if(v.type == 'EmailMessage')
-		desc = $(v.element).find('#id_subject').val();
-	    else if(v.type == 'DNSRecord')
-		desc = $(v.element).find('#id_domain_name').val();
-	    else if(v.type == 'Address')
-		desc = $(v.element).find('#id_ip_addr').val();
+
+	    // Try the observable title
+	    desc = $.trim($('[name="dda-observable-title"]', v.element).val());
+	    // No Observable title? Try field specific information
+	    if(desc==''){
+		if(v.type == 'File'){
+		    desc = $(v.element).find('#id_file_name').val();
+		}else if(v.type == 'EmailMessage'){
+		    desc = $.trim($(v.element).find('#id_subject').val());
+		    if(desc=='')
+			desc = $.trim($(v.element).find('#id_from_').val());
+		}else if(v.type == 'DNSRecord'){
+		    desc = $.trim($(v.element).find('#id_domain_name').val());
+		}else if(v.type == 'Address'){
+		    desc = $.trim($(v.element).find('#id_ip_addr').val());
+		}else if(v.type == 'Artifact'){
+		    if($.trim($(v.element).find('#id_data').val())!='')
+			desc = $.trim($(v.element).find('#id_data').val());
+		}else if(v.type == 'C2Object'){
+		    if($.trim($(v.element).find('#id_data').val())!='')
+			desc = $.trim($(v.element).find('#id_data').val());
+		}else if(v.type == 'HTTPSession'){
+		    if($.trim($(v.element).find('#id_method').val())!='' && $.trim($(v.element).find('#id_host').val())!='')
+			desc = $.trim($(v.element).find('#id_method').val()) + ' to ' + $.trim($(v.element).find('#id_host').val())
+		    else if($.trim($(v.element).find('#id_uri').val())!='')
+			desc = $.trim($(v.element).find('#id_uri').val());
+		}else if(v.type == 'Port'){
+		    desc = $.trim($(v.element).find('#id_port_value').val());
+		    if($.trim($(v.element).find('#id_layer4_protocol').val())!='')
+			desc = desc + ' (' + $.trim($(v.element).find('#id_layer4_protocol').val()) + ')';
+		}else if(v.type == 'URI'){
+		    desc = $.trim($(v.element).find('#id_value').val());
+		}
+	    }
 
 	    if(desc=='')
 		desc = def;
 
+	    if(desc.length>trim)
+		desc = desc.substring(0,trim-3) + '...';
+
 	    return desc	    
 	};
 
-	this.init_observable_pool = function(){
+
+
+
+
+	/*
+	 * if there is a item previewed in the relations tab, this
+	 * functions restores it to the ovservable pool. (the element
+	 * gets moved)
+	 */
+	this._restore_preview_observable = function(){
+	    var id = $('.dda-observable-template', '#dda-relation-object-details').first().attr('id');
+	    if(id){
+		$('> div', instance.element_registry[id].element).first().append(
+		    $('.dda-pool-element', '#dda-relation-object-details').remove()
+		);
+	    }
+	};
+
+	/*
+	 * Does some housekeeping in the observable pool
+	 * (usually when switching tabs)
+	 */
+	this.clean_observable_pool = function(){
+	    instance._restore_preview_observable();
+	};
+
+
+
+	/*
+	 * Renders the indicators on the package tab based on the object registries
+	 */
+	this.render_stix_tab = function(){
+	    // First clear all entries
+	    instance.package_indicators.html('');
+
+
+	    function isObservableInIndicator(id){
+		var ret = false;
+		$.each(instance.indicator_registry, function(i,v){
+		    if($.inArray(id, v.observables)!==-1){
+			ret = true;
+			return false;
+		    }
+		});
+		return ret;
+	    }
+	    
+	    //Init the observable pool
 	    instance.observable_pool.html('');
 	    $.each(instance.element_registry, function(i,v){
 		var div = $('<div class="dda-add-element clearfix" ></div>').data('id', i);
-		div.append('<h3>'+v.title+'</h3>');
+		if(isObservableInIndicator(v.observable_id))
+		    div.append('<span class="pull-right">+</span>')
+		div.append('<h3>'+v.type+'</h3>');
 		desc = instance.getElementName(v, i);
 		div.append('<p>'+desc+'</p>');
 
@@ -306,29 +439,30 @@ $(function() {
 		    }
 		});
 
-		instance.observable_pool.append(div);
+		instance.observable_pool.prepend(div);
 	    });
-	    instance.renderPackage();
-	};
 
 
-
-	// Renders the indicators on the package tab based on the object registries
-	this.renderPackage = function(){
-	    // First clear all entries
-	    instance.package_indicators.html('');
 
 	    // Add a dropzone element for dropping observables on non-indicators
 	    instance.package_indicators.append($('<div><p>Drop here to create new indicator</p></div>').addClass('dda-package-indicators_dropzone dda-package_top_drop'));
 
+
+
 	    // Iterate over the registred indicators
 	    $.each(instance.indicator_registry, function(indicator_guid, indicator_element){
-		var div = $('<div class="dda-add-element"></div>');
+		var div = $('<div class="dda-add-element clearfix"></div>');
+		div.append(
+		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id_icon').val())
+			.attr('type', 'image/svg+xml')
+			.addClass('pull-left')
+			.css({'width': '30px', 'margin-right': '5px'})
+		);
 		
 		// Put the indicator title, use the 'title' input, or if empty, the guid
 		title = $('#id_indicator_title', indicator_element.element).val();
 		if(title=='')
-		    title = 'Indicator: ' + indicator_element.title
+		    title = 'Indicator: ' + indicator_element.object_id
 		div.append('<h3>'+title+'</h3>');
 
 		// Add the indicator-guid to the dropzone so we know it when dropping onto
@@ -344,6 +478,8 @@ $(function() {
 	    instance.package_indicators.find('.dda-package-indicators_dropzone').droppable({
                 "tolerance": "touch",
                 "drop": function( event, ui ) {
+		    if(!ui.draggable.hasClass('dda-add-element'))
+			return;
 		    var draggable = $(ui.draggable);
 		    var observable_id = $(draggable).data('id');
 		    var indicator_id = $(this).data('id');
@@ -352,51 +488,24 @@ $(function() {
 		    }
 		    instance.indicator_registry[indicator_id].observables.push(observable_id);
 		    instance.indicator_registry[indicator_id].observables = uniqueArray(instance.indicator_registry[indicator_id].observables);
-		    instance.renderPackage();
+		    instance.render_stix_tab();
 		},
                 "over": function (event, ui ) {
-		    $(event.target).addClass("dda-dropzone-hover");
+		    if(ui.draggable.hasClass('dda-add-element'))
+			$(event.target).addClass("dda-dropzone-hover");
                 },
                 "out": function (event, ui) {
 		    $(event.target).removeClass("dda-dropzone-hover");
                 }
 	    });
 
-	    //Register generate button handler
+
+	    /*
+	     * Register generate button handler
+	     * and export data
+	     */
 	    $('#dda-stix-generate').off('click').on('click', function(){
-		//generated-time
-		$('input[name="stix_produced_time"]', '#dda-stix-meta').val(Date.now());
-		var stix_base = {
-		    'stix_header': $('#dda-stix-meta').find('input, select, textarea').serializeObject(),
-		    'incidents': [],
-		    'indicators': [],
-		    'observables': []
-		}
-		$.each(instance.indicator_registry, function(i,v){
-		    var tmp = $(v.element).find('input, select, textarea').serializeObject();
-		    tmp.related_observables = v.observables;
-		    tmp.related_observables_condition = 'AND';
-		    stix_base.indicators.push(tmp);
-		});
-
-		$.each(instance.element_registry, function(i,v){
-		    //stix_base.observables[i] = $(v.element).find('input, select, textarea').serializeObject();
-		    var tmp = {
-			'observable_id': i,
-			'observable_description': '',
-			'related_observables': {},
-			'observable_properties': $(v.element).find('input, select, textarea').serializeObject()
-		    }
-
-		    $.each(v.relations, function(i,v){
-			tmp.related_observables[v.target] = v.label;
-		    });
-		    stix_base.observables.push(tmp);
-		});
-
-		//result = JSON.stringify(stix_base, null, "    ");
-		//console.log(result);
-
+		stix_base = instance.getJson();
 		$('#dda-gen-output').slideUp('fast',function(){		    
 		    $.post('transform', {'j':JSON.stringify(stix_base)}, function(data){
 			$('#dda-gen-output pre').text('');
@@ -408,12 +517,169 @@ $(function() {
 		});
 		return false;
 	    });
+	};
+
+
+
+	/*****for testing only*****/
+	// show json button
+
+	var get_jsn_btn = $('<button>Show JSON</button>').button().click(function(){
+	    result = JSON.stringify(instance.getJson(), null, "    ");
+	    var dlg = $('<div id="dda-show-json-dlg" title="JSON"><div id="dda-show-json-edit"></div></div>');
+	    dlg.dialog({
+		width: 600, height: 750, modal: true,
+		beforeClose: function( event, ui ) {
+		    var editor = ace.edit('dda-show-json-edit');
+		    editor.destroy();
+		    $('#dda-show-json-edit').remove();
+		},
+		resizeStop: function( event, ui ) {
+		    var editor = ace.edit('dda-show-json-edit');
+		    editor.resize();
+		}
+	    });
+	    var editor = ace.edit('dda-show-json-edit');
+	    editor.setReadOnly(true);
+	    editor.getSession().setMode("ace/mode/javascript");
+	    editor.setValue(result);
+	});
+	$('#dda-stix-generate').after(get_jsn_btn);
+
+	// import button
+	var import_jsn_btn = $('<button>Import JSON</button>').button().click(function(){
+	    result = JSON.stringify(instance.getJson(), null, "    ");
+	    var dlg = $('<div id="dda-import-json-dlg" title="JSON"><div id="dda-import-json-edit"></div></div>');
+	    dlg.dialog({
+		width: 600, height: 750, modal: true,
+		beforeClose: function( event, ui ) {
+		    var editor = ace.edit('dda-import-json-edit');
+		    editor.destroy();
+		    $('#dda-import-json-edit').remove();
+		},
+		resizeStop: function( event, ui ) {
+		    var editor = ace.edit('dda-import-json-edit');
+		    editor.resize();
+		}
+	    });
+	    var editor = ace.edit('dda-import-json-edit');
+	    editor.getSession().setMode("ace/mode/javascript");
+
+	    var btn = $('<button class="pull-right">Ok</button>').button().click(function(){
+		var ta_val = editor.getValue();
+		try {
+		    jsonlint.parse(ta_val);
+		    ta_val = $.parseJSON(ta_val);
+		}catch (err){
+		    alert(err);
+		    ta_val = '';
+		}
+		if(ta_val!=''){
+		    instance.loadFromJson(ta_val);
+		    instance.render_stix_tab();
+		    dlg.dialog('close');
+		}
+	    }).css('margin-right', '15px');
+	    dlg.append(
+		    btn
+	    );
+	});
+	$('#dda-stix-generate').after(import_jsn_btn);
+	/**********/
+
+
+
+
+
+	/*
+	 * Returns the JSON representation of the current configuration
+	 */
+	this.getJson = function(){
+	    //generated-time
+	    var stix_base = {
+		'stix_header': $('#dda-stix-meta').find('input, select, textarea').serializeObject(),
+		'incidents': [],
+		'indicators': [],
+		'observables': []
+	    }
+	    $.each(instance.indicator_registry, function(i,v){
+		var tmp = $(v.element).find('input, select, textarea').serializeObject();
+		tmp.related_observables = v.observables;
+		tmp.related_observables_condition = 'AND';
+		tmp.indicator_id = v.object_id;
+		stix_base.indicators.push(tmp);
+	    });
+
+	    $.each(instance.element_registry, function(i,v){
+		var tmp = {
+		    'observable_id': i,
+		    'observable_title': $(v.element).find('[name="dda-observable-title"]').val(),
+		    'observable_description': $(v.element).find('[name="dda-observable-description"]').val(),
+		    'related_observables': {},
+		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').serializeObject()
+		}
+
+		$.each(v.relations, function(i,v){
+		    tmp.related_observables[v.target] = v.label;
+		});
+		stix_base.observables.push(tmp);
+	    });
+	    return stix_base
+	};
+
+
+
+
+
+	/*
+	 * Tries to initialize the GUI from a provided JSON
+	 */
+	this.loadFromJson = function(jsn){
+	    // Restore Stix header information
+	    $.each(jsn.stix_header, function(i,v){
+		$('[name="'+i+'"]', '#dda-stix-meta').val(v);
+	    });
+
+	    // Restore indicators
+	    instance.indicator_registry = {};
+	    $.each(jsn.indicators, function(i,v){
+		instance._add_indicator(false, v.indicator_id);
+		var el = instance.indicator_registry[v.indicator_id];
+		$.each(v, function(i,v){
+		    //try to set values
+		    $('[name="'+i+'"]', el.element).val(v);
+		});
+		// Restore included observables
+		el.observables = v.related_observables;
+	    });
+
+	    // Restore observables
+	    instance.element_registry = {};
+	    $.each(jsn.observables, function(i,v){
+		var template = 'dda-observable-template_' + v.observable_properties.object_type;
+		//TODO: if template does not exitst. issue an error.
+		instance.addElementToPool(template, v.observable_id);
+		var el = instance.element_registry[v.observable_id];
+		
+		//restore title and description
+		el.element.find('[name="dda-observable-title"]').val(v.observable_title);
+		el.element.find('[name="dda-observable-description"]').val(v.observable_title);
+
+		$.each(v.observable_properties, function(i,v){
+		    //try to set values
+		    $('[name="'+i+'"]', el.element).val(v);
+		});
+		//restore related observables
+		$.each(v.related_observables, function(i,v){
+		    el.relations.push({label: v, target: i});
+		});
+	    });
 
 	};
 
-	this.init_d3 = function(){
-	    // This is based on http://bl.ocks.org/benzguo/4370043
 
+
+	this.init_d3 = function(){
             var getData = function(){
 		var data_set = [];
 		$.each(instance.element_registry, function(i,v){
@@ -429,9 +695,9 @@ $(function() {
 			element.relations.map( function( relation) {
                             var src, tgt;
                             $.each(data_set, function(i,v){
-				if(v.object_id == relation.target)
+				if(v.observable_id == relation.target)
                                     tgt=i;
-				if(v.object_id == element.object_id)
+				if(v.observable_id == element.observable_id)
                                     src = i;
                             });
                             return { source : src, target : tgt};
@@ -508,12 +774,27 @@ $(function() {
 		.attr('height', height)
 		.attr('fill', 'white');
 
+	    // build the arrow.
+	    vis.append("svg:defs").selectAll("marker")
+		.data(["end"])      // Different link/path types can be defined here
+		.enter().append("svg:marker")    // This section adds in the arrows
+		.attr("id", String)
+		.attr("viewBox", "0 -5 10 10")
+		.attr("refX", 16)
+		.attr("refY", 0)
+		.attr("markerWidth", 6)
+		.attr("markerHeight", 6)
+		.attr("orient", "auto")
+		.append("svg:path")
+		.attr("d", "M0,-5L10,0L0,5");
+
+
 	    // init force layout for nodes
 	    var force = d3.layout.force()
 		.size([width, height])
 		.nodes(getData()) // initialize with a single node
 		.links(getLinks())
-		.linkDistance(200).charge(-1000)
+		.linkDistance(150).charge(-800)
 		.on("tick", tick);
 
 	    // force layout for labels
@@ -647,7 +928,12 @@ $(function() {
 		labelAnchor.call(updateNode);
 		
 		// Correct position of links
-		link.call(updateLink);
+		//link.call(updateLink);
+		link.attr("d", function(d) {
+		    var dx = d.target.x - d.source.x,
+		    dy = d.target.y - d.source.y;
+		    return "M" + d.source.x + "," + d.source.y + " " + d.target.x + "," + d.target.y;
+		});
 		labelLink.call(updateLink);
 	    }
 
@@ -663,10 +949,10 @@ $(function() {
 	    instance._d3_redraw = function(load){
 		if(typeof(load)==='undefined') load = false;
 		if(load){
-		    force.nodes(getData());
-		    force.links(getLinks());
 		    force2.nodes(getLabelAnchors());
 		    force2.links(getLabelAnchorLinks());
+		    force.nodes(getData());
+		    force.links(getLinks());
 		    //reset zoom
 		    zoom.scale(1);
 		    zoom.translate([0,0])
@@ -674,14 +960,42 @@ $(function() {
 		}
 		nodes = force.nodes();
 		links = force.links();
-		labelAnchors = force2.nodes();
 		labelLinks = force2.links();
+		labelAnchors = force2.nodes();
 
 
-		labelLink = labelLink.data(labelLinks);
-		labelLink.exit().remove();
+
+		// Create the links between the nodes
+		link = link.data(links);
+		link.enter().insert("path", ".node")
+		    .attr("class", "link").attr('marker-end', 'url(#end)')
+		    .on("mousedown", 
+			function(d) { 
+			    mousedown_link = d; 
+			    if (mousedown_link == selected_link) selected_link = null;
+			    else selected_link = mousedown_link; 
+			    if(selected_link!==null){
+				//select the relation type from the list
+				$.each(selected_link.source.relations, function(i,v){
+				    if(v.target==selected_link.target.observable_id){
+					$('input[value="'+v.label+'"]').parent('.dda-add-element').click();
+				    }
+				});
+			    }
+			    selected_node = null; 
+			    instance._d3_redraw(); 
+			})
+		link.exit().remove();
+
+		link.classed("link_selected", function(d) { return d === selected_link; });
 
 
+
+
+
+
+
+		// Create the node labels
 		labelAnchor = labelAnchor.data(labelAnchors);
 		labelAnchor.enter().insert('g').attr('class', 'labelAnchor')
 		    .append('text').style("fill", "#555").style("font-family", "Arial").style("font-size", 12);
@@ -691,42 +1005,25 @@ $(function() {
 		labelAnchor.select('text').each(function(d,i){
 		    if(i % 2 !== 0){
 			d3.select(this).select('tspan').remove();
-			d3.select(this).append('tspan').attr({'x': 0, 'y': '0em'}).text(d.node.title);
-			var _n = instance.getElementName(d.node, '');
+			d3.select(this).append('tspan').attr({'x': 0, 'y': '0em'}).text(d.node.type);
+			var _n = instance.getElementName(d.node, '', 13);
 			if(_n!='')
 			    d3.select(this).append('tspan').attr({'x': 0, 'y': '1.2em'}).text(_n);
 		    }
 		});
 
+		//Link the node labels
+		labelLink = labelLink.data(labelLinks);
+		labelLink.exit().remove();
 
 
-		link = link.data(links);
-		link.enter().insert("line", ".node")
-		    .attr("class", "link")
-		    .on("mousedown", 
-			function(d) { 
-			    mousedown_link = d; 
-			    if (mousedown_link == selected_link) selected_link = null;
-			    else selected_link = mousedown_link; 
-			    if(selected_link!==null){
-				//select the relation type from the list
-				$.each(selected_link.source.relations, function(i,v){
-				    if(v.target==selected_link.target.object_id){
-					$('input[value="'+v.label+'"]').parent('.dda-add-element').click();
-				    }
-				});
-			    }
-			    selected_node = null; 
-			    instance._d3_redraw(); 
-			})
 
-		link.exit().remove();
 
-		link.classed("link_selected", function(d) { return d === selected_link; });
 
+		// Create the data nodes
 		node = node.data(nodes);
 		node.enter()
-		    .insert("g").attr("class", "node").append('circle').attr('r', 10).attr('style', function(d){return 'fill:'+fill(d.title)+';opacity:0.7;'})
+		    .insert("g").attr("class", "node").append('circle').attr('r', 10).attr('style', function(d){return 'fill:'+fill(d.type)+';opacity:1;'})
 		    .on("mousedown", 
 			function(d) { 
 
@@ -756,16 +1053,24 @@ $(function() {
 			function(d) { 
 			    if (mousedown_node) {
 				mouseup_node = d; 
-				if (mouseup_node == mousedown_node) { resetMouseVars(); return; }
+				if (mouseup_node == mousedown_node) { 
+				    instance._restore_preview_observable();
+				    
+				    $('#dda-relation-object-details').append(
+					mouseup_node.element.find('.dda-pool-element')
+				    );
+				    resetMouseVars(); 
+				    return; 
+				}
 
 				// add link
 				var link = {source: mousedown_node, target: mouseup_node};
 
 				//check if relation already exists
-				var rel = instance.element_registry[mousedown_node.object_id].relations;
+				var rel = instance.element_registry[mousedown_node.observable_id].relations;
 				rel_exists=false;
 				$.each(rel, function(i,v){
-				    if(v.target==mouseup_node.object_id){
+				    if(v.target==mouseup_node.observable_id){
 					rel_exists = true;
 					return false;
 				    }
@@ -773,9 +1078,9 @@ $(function() {
 
 				if(!rel_exists){
 
-				    instance.element_registry[mousedown_node.object_id].relations.push({
+				    instance.element_registry[mousedown_node.observable_id].relations.push({
 					label: $('input[name="dda-selected-relation"]:checked').val(),
-					target: mouseup_node.object_id
+					target: mouseup_node.observable_id
 				    });
 				}
 
@@ -801,11 +1106,12 @@ $(function() {
 		    .attr("r", 0)
 		    .remove();
 
-		node
-		    .classed("node_selected", function(d) { return d === selected_node; });
+		node.classed("node_selected", function(d) { return d === selected_node; });
 
 
-		
+
+
+
 
 		if (d3.event) {
 		    // prevent browser's default behavior
@@ -813,8 +1119,8 @@ $(function() {
 		    d3.event.preventDefault();
 		}
 
-		force.start();
 		force2.start();
+		force.start();
 	    }
 
 	    function spliceLinksForNode(node) {
@@ -831,11 +1137,19 @@ $(function() {
 		switch (d3.event.keyCode) {
 		case 8: // backspace
 		case 46: { // delete
-		    if (selected_node) {
-			nodes.splice(nodes.indexOf(selected_node), 1);
-			spliceLinksForNode(selected_node);
-		    }
-		    else if (selected_link) {
+		    if (selected_link) {
+			// Remove the relation from the source object
+			var src = selected_link.source.observable_id;
+			var tgt = selected_link.target.observable_id;
+
+			var source_relations = instance.element_registry[src].relations
+			var new_rel = [];
+			$.each(source_relations, function(i,v){
+			    if(v.target!=tgt)
+				new_rel.push(v);
+			});
+			instance.element_registry[src].relations = new_rel;
+
 			links.splice(links.indexOf(selected_link), 1);
 		    }
 		    selected_link = null;
@@ -852,19 +1166,25 @@ $(function() {
 	init_d3();
 
 
-
-
 	return instance;
     };
     var b = builder();
+
+
 
     $('#dda-container-tabs').tabs({
 	active: 1,
 	activate:function(event,ui){
 	    if(ui.newTab.index()==0){
-		b.init_observable_pool();
+		// Render the Stix package tab
+		b.render_stix_tab();
+	    }
+	    if(ui.newTab.index()==1){
+		// Do the housekeeping in the observable pool
+		b.clean_observable_pool();
 	    }
 	    if(ui.newTab.index()==3){
+		// Redraw the relation pane
 		b._d3_redraw(true);
 	    }
         }
