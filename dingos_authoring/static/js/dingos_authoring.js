@@ -513,20 +513,14 @@ $(function() {
 		.size([width, height])
 		.nodes(getData()) // initialize with a single node
 		.links(getLinks())
-		.linkDistance(200)
-		.charge(-1000)
-//.gravity(1).linkDistance(200).charge(-3000)
+		.linkDistance(200).charge(-1000)
 		.on("tick", tick);
 
 	    // force layout for labels
 	    var force2 = d3.layout.force()
 	    	.nodes(getLabelAnchors())
 	    	.links(getLabelAnchorLinks())
-	    	.gravity(0)
-	    	.linkDistance(0)
-	    	.linkStrength(0.7)
-	    	.charge(-100)
-//.linkDistance(0).linkStrength(0.7).charge(-100)
+	    	.gravity(0).linkDistance(0).linkStrength(0.7).charge(-100)
 	    	.size([width, height]);
 
 
@@ -689,10 +683,20 @@ $(function() {
 
 
 		labelAnchor = labelAnchor.data(labelAnchors);
-		labelAnchor.enter().insert('g').attr('class', 'labelAnchor').append('text').text(function(d, i) {
-		    return i % 2 == 0 ? "" : d.node.title
-		}).style("fill", "#555").style("font-family", "Arial").style("font-size", 12);
+		labelAnchor.enter().insert('g').attr('class', 'labelAnchor')
+		    .append('text').style("fill", "#555").style("font-family", "Arial").style("font-size", 12);
 		labelAnchor.exit().remove();
+
+		//Update labels
+		labelAnchor.select('text').each(function(d,i){
+		    if(i % 2 !== 0){
+			d3.select(this).select('tspan').remove();
+			d3.select(this).append('tspan').attr({'x': 0, 'y': '0em'}).text(d.node.title);
+			var _n = instance.getElementName(d.node, '');
+			if(_n!='')
+			    d3.select(this).append('tspan').attr({'x': 0, 'y': '1.2em'}).text(_n);
+		    }
+		});
 
 
 
