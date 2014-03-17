@@ -7,161 +7,97 @@ from dingos.models import InfoObject
 from django.db.models import Q
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME
 from dingos.view_classes import BasicListView
+from django.views.generic import View
+
 
 from libmantis import *
 from mantis_client import utils
-from mantis_client.mantis_templates import alpaca_test as mantis_indicators
+from mantis_client.transformer import Transformer
+
+import forms as observables
+from operator import itemgetter
+
+
 
 
 def index(request):
 
-    json_skeleton = """
-{
-    "title": "",
-    "description": "",
-    "type": "object",
-    "properties": {
-
-    },
-    "definitions": {
-        "indicator_title": {
-            "type": "string",
-            "title": "Indicator Title",
-            "description": "Provide a descriptive title of the indicator",
-            "required": true
-        },
-        "indicator_description": {
-            "type": "string",
-            "title": "Indicator Description",
-            "required": false
-        },
-        "indicator_alternative": {
-            "type": "string",
-            "title": "Indicator Alternative ID",
-            "description": "e.g. INVES-XXXXX",
-            "required": false
-        },
-        "indicator_type": {
-            "title": "Indicator Type",
-            "enum": ["IP Watchlist"]
-        },
-	"indicator_confidence": {
-            "title": "Indicator Confidence",
-	    "enum": ["High","Medium","Low"],    
-            "required": true,
-            "default": "Medium"
-	},
-        "indicator_sighting": {
-            "title": "Indicator Sighting",
-            "enum": ["PLM-CERT","DSIE","Mandiant"],
-            "required": true,
-            "default":"PLM-CERT"
-        }
-    }
-}
-    """
-
-    options_skeleton = """
-{
-    "fields": {
-    },
-    "definitions": {
-    	"indicator_sighting": {
-            "type": "select"
-	},
-    	"indicator_type": {
-            "type": "select"
-	}
-    }
-}
-    """
-
-    options_skeleton = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(options_skeleton)
-    options_skeleton = json.dumps(options_skeleton)
-
-    available_templates = {};
-    for obj_elem in (dir(mantis_indicators)):
-        if obj_elem.startswith("TEMPLATE_"):
-            _cls = getattr(mantis_indicators, obj_elem)
-            available_templates[obj_elem]= _cls()
-
-    def get_available_templates():
-        ret = []
-        for atn, ati in available_templates.iteritems():
-            if 'FORMDEF' in dir(ati):
-                samp = ati.FORMDEF
-                jsamp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(samp)
-
-                # Prepare/enrich json template
-
-                temp = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(json_skeleton)
-                temp['title'] = jsamp['meta']['title']
-                temp['description'] = jsamp['meta']['description']
-                temp['properties'] = jsamp['data']
-
-                tempo = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(options_skeleton)
-                tempo['fields'] = jsamp['options']
-
-                ret.append({'id': atn.replace('TEMPLATE_', ''),
-                            'title': temp['title'],
-                            'template': json.dumps(temp),
-                            'options': json.dumps(tempo)
-                        })
-        return ret
-
-    def get_template_json(id):
-        at = get_available_templates()
-        for t in at:
-            if t['id']==id:
-                return t['template']
-        return '{}'
-
-    def get_options_json(id):
-        at = get_available_templates()
-        for t in at:
-            if t['id']==id:
-                return t['options']
-        return '{}'
-
-    def get_template(id):
-        at = get_available_templates()
-        for t in at:
-            if t['id']==id:
-                return t
-        return None
+    observableForms = []
+    indicatorForms = []
+    for obj_elem in dir(observables):
+        if obj_elem.startswith("Cybox"):
+            _cls = getattr(observables, obj_elem)
+            observableForms.append(_cls())
+        elif obj_elem.startswith("Stix"):
+            _cls = getattr(observables, obj_elem)
+            indicatorForms.append(_cls())
 
 
-    at = get_available_templates()
-    selected_template = at[0]['id'] if at else None
-    try:
-        selected_template = request.GET['template']
-    except (KeyError):
-        pass
+    relations = [
+        {'label': 'Created', 'value': 'Created', 'description': 'Specifies that this object created the related object.'},
+        {'label': 'Deleted', 'value': 'Deleted', 'description': 'Specifies that this object deleted the related object.'},
+        {'label': 'Read_From', 'value': 'Read_From', 'description': 'Specifies that this object was read from the related object.'},
+        {'label': 'Wrote_To', 'value': 'Wrote_To', 'description': 'Specifies that this object wrote to the related object.'},
+        {'label': 'Downloaded_From', 'value': 'Downloaded_From', 'description': 'Specifies that this object was downloaded from the related object.'},
+        {'label': 'Downloaded', 'value': 'Downloaded', 'description': 'Specifies that this object downloaded the related object.'},
+        {'label': 'Uploaded', 'value': 'Uploaded', 'description': 'Specifies that this object uploaded the related object.'},
+        {'label': 'Received_Via_Upload', 'value': 'Received_Via_Upload', 'description': 'Specifies that this object received the related object via upload.'},
+        {'label': 'Opened', 'value': 'Opened', 'description': 'Specifies that this object opened the related object.'},
+        {'label': 'Closed', 'value': 'Closed', 'description': 'Specifies that this object closed the related object.'},
+        {'label': 'Copied', 'value': 'Copied', 'description': 'Specifies that this object copied the related object.'},
+        {'label': 'Moved', 'value': 'Moved', 'description': 'Specifies that this object moved the related object.'},
+        {'label': 'Sent', 'value': 'Sent', 'description': 'Specifies that this object sent the related object.'},
+        {'label': 'Received', 'value': 'Received', 'description': 'Specifies that this object received the related object.'},
+        {'label': 'Renamed', 'value': 'Renamed', 'description': 'Specifies that this object renamed the related object.'},
+        {'label': 'Resolved_To', 'value': 'Resolved_To', 'description': 'Specifies that this object was resolved to the related object.'},
+        {'label': 'Related_To', 'value': 'Related_To', 'description': 'Specifies that this object is related to the related object.'},
+        {'label': 'Dropped', 'value': 'Dropped', 'description': 'Specifies that this object dropped the related object.'},
+        {'label': 'Contains', 'value': 'Contains', 'description': 'Specifies that this object contains the related object.'},
+        {'label': 'Extracted_From', 'value': 'Extracted_From', 'description': 'Specifies that this object was extracted from the related object.'},
+        {'label': 'Installed', 'value': 'Installed', 'description': 'Specifies that this object installed the related object.'},
+        {'label': 'Connected_To', 'value': 'Connected_To', 'description': 'Specifies that this object connected to the related object.'},
+        {'label': 'FQDN_Of', 'value': 'FQDN_Of', 'description': 'Specifies that this object is an FQDN of the related object.'},
+        {'label': 'Characterizes', 'value': 'Characterizes', 'description': 'Specifies that this object describes the properties of the related object. This is most applicable in cases where the related object is an Artifact Object and this object is a non-Artifact Object.'},
+        {'label': 'Used', 'value': 'Used', 'description': 'Specifies that this object used the related object.'},
+        {'label': 'Redirects_To', 'value': 'Redirects_To', 'description': 'Specifies that this object redirects to the related object.'}
+    ]
 
+    return render_to_response('dingos_authoring/index.html',{
+        'title': 'Mantis Authoring',
+        'observableForms': observableForms,
+        'indicatorForms': indicatorForms,
+        'relations': sorted(relations, key=itemgetter('label'))
+    })
 
-
-    # from schema import alpaca_generator
-    # sc = alpaca_generator(get_template_json(selected_template))
-    # schema_template = sc.get_schema()
-    # options_template = sc.get_options()
-    schema_template = get_template_json(selected_template)
-    options_template = get_options_json(selected_template)
-
-    print schema_template
-    print options_template
-
-    res = {
-        'title': 'MANTIS Dingos Authoring',
-        'available_templates': at,
-        'selected_template': get_template(selected_template),
-        'schema': schema_template,
-        'options': options_template
-    }
-    return render_to_response('dingos_authoring/index.html',
-                              res,
-                              context_instance=RequestContext(request))
     
 
+
+
+class transform(View):
+    def post(self, request, *args, **kwargs):
+        res = {}
+        POST = request.POST
+        if POST.has_key(u'j'):
+            j = None
+            try:
+                j = json.loads(POST[u'j'])
+            except:
+                pass
+            if not j:
+                return HttpResponse('{}', content_type="application/json")
+
+        logger = utils.createLogger("logger")
+        tr = Transformer(logger)
+        tr.create_observables(j.get('observables', {}))
+        tr.create_indicators(j.get('indicators', {}))
+        tr.create_incidents(j.get('incidents', {}))
+        
+        stix_dict = tr.create_stix_dict(j.get("stix_header",{}))
+        stix_obj = tr.create_STIX_xml_from_Dict(stix_dict)
+        
+        res['xml'] = stix_obj['stix_xml']
+
+        return HttpResponse(json.dumps(res), content_type="application/json")
 
 
 class ref(BasicListView):
@@ -210,3 +146,6 @@ class ref(BasicListView):
         return HttpResponse(content,
                             content_type='application/json',
                             **httpresponse_kwargs)
+
+
+

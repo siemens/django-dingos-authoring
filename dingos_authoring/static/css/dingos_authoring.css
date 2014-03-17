@@ -11,6 +11,14 @@ input, button {
     clear: both;
 }
 
+.pull-right {
+    float: right;
+}
+
+.pull-left {
+    float: left;
+}
+
 #dda-template-body input {
     width: auto !important;
 }
@@ -95,4 +103,176 @@ input, button {
 }
 .dda-toggle-active {
     background-image: linear-gradient(#E5E5E5, #DBDBDB) !important;  
+}
+
+
+/* builder styles */
+#grp-content-container #dda-container-tabs > .ui-widget-content {
+    padding: 20px 0 !important;
+}
+
+#dda-pool-elements {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+#dda-pool-list, #dda-indicator-list {
+    background: #fff;
+    min-height: 200px;
+}
+
+#dda-pool-list > .dda-add-element, #dda-indicator-list > .dda-add-element {
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.dda-add-element table, .dda-observable-template table{
+    width: 100%;
+}
+#dda-indicator-list > .dda-add-element table textarea, #dda-pool-list > .dda-add-element table textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+#dda-pool-list .dda-pool-element {
+    margin-top: 20px;
+}
+
+.dda-observable-template input, 
+.dda-indicator-template input, 
+.dda-add-element input {
+    width: 100%;
+}
+.dda-observable-template textarea, 
+.dda-indicator-template textarea,
+.dda-add-element textarea{
+    width: 100%;
+    resize: vertical;
+    min-height: 40px;
+}
+.dda-indicator-template textarea {
+    min-height: 120px;
+}
+
+
+/* .dda-obs-add, .dda-obs-remove, .dda-ind-remove { */
+/*     border-radius: 0px; */
+/*     color: #000; */
+/*     margin-top: 4px !important; */
+/* } */
+/* #dda-indicator-add-btn { */
+/*     color: #000; */
+/*     font-size: 11px; */
+/*     border-radius: 0px; */
+/* } */
+
+#dda-indicator-add-btn-menu {
+    position: absolute;
+    top: 30px;
+    right:10px;
+}
+
+.dda-dropzone-highlight {
+    border: 1px dashed #888888;
+    min-height: 20px;
+    margin-top: 4px;
+}
+
+.dda-dropzone-hover {
+  background-color: #EEEEEE;
+  border: 1px dashed #888888;
+  min-height: 50px;
+}
+
+#dda-package-indicators .dda-add-element {
+    margin-bottom: 10px;
+}
+
+#dda-pool-list .helptext {
+    margin-top: 5px;
+    display: block;
+}
+
+.dda-package_top_drop {
+    margin-bottom: 10px;
+}
+
+.dda-package_top_drop p {
+    font-style: italic;
+    text-align: center;
+    margin-top: 2px;
+    visibility: hidden;
+}
+
+.dda-dropzone-highlight.dda-package_top_drop p {
+    visibility: visible;
+}
+.dda-dropzone-hover.dda-package_top_drop p {
+    margin-top: 15px;
+}
+
+
+#relation-pane {
+    width: 100%;
+    height: 800px;
+    background-color: #fff;
+}
+
+
+
+#dda-relation-list .dda-rel-selected, #dda-relation-list .dda-rel-selected h3 {
+    background: #CEE9F2;
+}
+
+.node{
+  cursor: crosshair;
+}
+
+.node circle {
+    fill: #fff;
+    stroke: #000;
+    stroke-width: 2px;
+}
+.node text {
+  pointer-events: none;
+}
+
+.node_selected circle{
+  fill: #ff7f0e;
+  stroke: #ff7f0e;
+}
+
+.drag_line {
+  stroke: #999;
+  stroke-width: 5;
+  pointer-events: none;
+}
+
+.drag_line_hidden {
+  stroke: #999;
+  stroke-width: 0;
+  pointer-events: none;
+}
+
+.link {
+  stroke: #999;
+  stroke-width: 2.5px;
+  cursor: crosshair;
+  fill: none;
+}
+
+.link_selected {
+  stroke: #ff7f0e !important;
+}
+
+.ui-widget-overlay {
+    background:none;
+}
+
+#dda-show-json-edit, #dda-import-json-edit {
+    width: 100%;
+    height: 100%;
+}
+#dda-import-json-edit {
+    margin-bottom: -40px;
 }
