@@ -507,11 +507,16 @@
 	    $('#dda-stix-generate').off('click').on('click', function(){
 		stix_base = instance.getJson();
 		$('#dda-gen-output').slideUp('fast',function(){		    
+		    var editor = ace.edit('dda-gen-output-content');
 		    $.post('transform', {'j':JSON.stringify(stix_base)}, function(data){
-			$('#dda-gen-output pre').text('');
 			if(data.xml !== undefined){
-			    $('#dda-gen-output pre').text(data.xml);
 			    $('#dda-gen-output').slideDown('fast');
+			    editor.setOptions({
+				maxLines: 50
+			    });
+			    editor.setReadOnly(true);
+			    editor.getSession().setMode("ace/mode/xml");
+			    editor.setValue(data.xml);
 			}
 		    }, 'json');
 		});

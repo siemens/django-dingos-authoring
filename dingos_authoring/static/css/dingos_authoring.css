@@ -276,3 +276,8 @@ input, button {
 #dda-import-json-edit {
     margin-bottom: -40px;
 }
+
+#dda-stix-meta textarea {
+    resize: vertical;
+    min-height: 30px;
+}

@@ -8,11 +8,11 @@ from django.db.models import Q
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME
 from dingos.view_classes import BasicListView
 from django.views.generic import View
+from transformer import stixTransformer
 
 
 from libmantis import *
 from mantis_client import utils
-from mantis_client.transformer import Transformer
 
 import forms as observables
 from operator import itemgetter
@@ -86,16 +86,8 @@ class transform(View):
             if not j:
                 return HttpResponse('{}', content_type="application/json")
 
-        logger = utils.createLogger("logger")
-        tr = Transformer(logger)
-        tr.create_observables(j.get('observables', {}))
-        tr.create_indicators(j.get('indicators', {}))
-        tr.create_incidents(j.get('incidents', {}))
-        
-        stix_dict = tr.create_stix_dict(j.get("stix_header",{}))
-        stix_obj = tr.create_STIX_xml_from_Dict(stix_dict)
-        
-        res['xml'] = stix_obj['stix_xml']
+        t = stixTransformer(j)
+        res['xml'] = t.run()
 
         return HttpResponse(json.dumps(res), content_type="application/json")
 
