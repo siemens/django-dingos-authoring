@@ -77,18 +77,16 @@ class transform(View):
     def post(self, request, *args, **kwargs):
         res = {}
         POST = request.POST
+        jsn = ''
         if POST.has_key(u'j'):
-            j = None
-            try:
-                j = json.loads(POST[u'j'])
-            except:
-                pass
-            if not j:
-                return HttpResponse('{}', content_type="application/json")
+            jsn = POST[u'j']
 
-        t = stixTransformer(j)
-        res['xml'] = t.run()
+        t = stixTransformer(jsn)
+        stix = t.getStix()
+        if not stix:
+            return HttpResponse('{}', content_type="application/json")
 
+        res['xml'] = stix
         return HttpResponse(json.dumps(res), content_type="application/json")
 
 

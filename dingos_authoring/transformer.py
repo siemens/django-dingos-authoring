@@ -12,7 +12,6 @@ from stix.indicator import Indicator
 from stix.core import STIXPackage, STIXHeader
 from stix.common import InformationSource, Confidence
 from stix.common.handling import Handling
-#from stix.bindings.data_marking import MarkingSpecificationType, MarkingStructureType, MarkingType
 from stix.extensions.marking.tlp import TLPMarkingStructure
 from stix.data_marking import Marking, MarkingSpecification
 from stix.bindings.extensions.marking.tlp import TLPMarkingStructureType
@@ -24,18 +23,57 @@ class stixTransformer:
     Implements the transformer used to transform the JSON produced by
     the MANTIS Authoring GUI into a valid STIX document.
     """
+    
+    # Some defaults
+    jsn = None
+    namespace_name = "cert.siemens.com"
+    namespace_prefix = "siemens_cert"
+    stix_header = {}
+    indicators = {}
+    observables = {}
+    old_observable_mapping = {}
+    cybox_observable_list = None
 
     def __init__(self, jsn):
-        NS = cybox.utils.Namespace("cert.siemens.com", "siemens_cert")
-        cybox.utils.set_id_namespace(NS)
-        stix.utils.set_id_namespace({"cert.siemens.com": "siemens_cert"})
-        self.jsn = jsn
+        # Set the namespace
+        # TODO: make adjustable (user dependend?)
+        self.namespace = cybox.utils.Namespace(self.namespace_name, self.namespace_prefix)
+        cybox.utils.set_id_namespace(self.namespace)
+        stix.utils.set_id_namespace({self.namespace_name: self.namespace_prefix})
+
+        if type(jsn) == dict:
+            self.jsn = jsn
+        else:
+            try:
+                self.jsn = json.loads(jsn)
+            except:
+                print 'Error parsing provided JSON'
+                return None
+
+        if not self.jsn:
+            return None
+
+        # Now process the parts
+        self.__process_observables()
+        self.__process_indicators()
+        self.__create_stix_package()
 
 
 
-    def process_observables(self, observables):
+
+    def __process_observables(self):
+        """
+        Processes the observables JSON part and produces a list of observables.
+        """
+        try:
+            observables = self.jsn['observables']
+        except:
+            print "Error. No observables passed."
+            return
+
         cybox_observable_dict = {}
         relations = {}
+
 
         # First collect all object relations.
         for obs in observables:
@@ -53,14 +91,18 @@ class stixTransformer:
 
 
             if type(cybox_obs)==list: # We have multiple objects as result. We now need to create new ids and update the relations
+                old_id = obs['observable_id']
                 new_ids = []
+                translations = {} # used to keep track of which new __ id was translated
                 for no in cybox_obs:
                     _tmp_id = '__' + str(uuid.uuid4())
                     cybox_observable_dict[_tmp_id] = no
                     new_ids.append(_tmp_id)
+                    translations[_tmp_id] = old_id
+
                 # Now find references to the old observable_id and replace with relations to the new ids.
                 # Instead of manipulation the ids, we just generate a new array of relations
-                old_id = obs['observable_id']
+                    
                 new_relations = {}
                 for obs_id, obs_rel in relations.iteritems():
                     if obs_id==old_id: # our old object has relations to other objects
@@ -89,19 +131,26 @@ class stixTransformer:
         # Observables and relations are now processed. The only
         # thing left is to include the relation into the actual
         # objects.
-        cybox_observable_list = []
+        self.cybox_observable_list = []
         for obs_id, obs in cybox_observable_dict.iteritems():
             for rel_id, rel_type in relations[obs_id].iteritems():
                 related_object = cybox_observable_dict[rel_id]
                 obs.add_related(related_object, rel_type, inline=False)
             if not obs_id.startswith('__'): # If this is not a generated object we keep the observable id!
                 obs = Observable(obs, obs_id)
-            cybox_observable_list.append(obs)
-        #return cybox_observable_dict.values()
-        return cybox_observable_list
+            else:
+                obs = Observable(obs)
+                self.old_observable_mapping[obs.id_] = translations[obs_id]
+
+            self.cybox_observable_list.append(obs)
+
+        return self.cybox_observable_list
 
 
     def __create_stix_indicator(self, indicator):
+        """
+        Helper function to create an Indicator object
+        """
         stix_indicator = Indicator(indicator['indicator_id'])
         stix_indicator.title = String(indicator['indicator_title'])
         stix_indicator.description = String(indicator['indicator_description'])
@@ -109,22 +158,61 @@ class stixTransformer:
         stix_indicator.indicator_types = String(indicator['indicator_type'])
         return stix_indicator, indicator['related_observables']
 
-    def iterate_indicators(self, indicators, observable_list):
-        stix_indicators = []
+
+
+    def __process_indicators(self):
+        """
+        Processes the indicator JSON part. 
+        Sets the stix_indicators and the loose_observables which will
+        be picked up by the create_stix_package.
+        (observables referenced in an indicator will be included there
+        while loose observables are not inlcluded in any indicator and
+        will just be appended to the package by create_stix_package)
+        """
+        if not self.cybox_observable_list:
+            print "Error. Cybox observables not prepared"
+            return
+
+        indicators = self.jsn['indicators']
+        observable_list = self.cybox_observable_list
+
         to_remove = []
+        self.stix_indicators = []
+        self.loose_observables = observable_list
+
         for indicator in indicators:
             stix_indicator, related_observables = self.__create_stix_indicator(indicator)
             for observable in observable_list:
-                if observable.id_ in related_observables:
+                check_obs_id = observable.id_
+                # if we have autogenerated observables, we check against the OLD id the item had before yielding new ones
+                if check_obs_id in self.old_observable_mapping.keys(): 
+                    check_obs_id = self.old_observable_mapping[observable.id_]
+                    
+                if check_obs_id in related_observables:
                     stix_indicator.add_observable(observable)
                     to_remove.append(observable)
-            stix_indicators.append(stix_indicator)
-        """ remove all observables that are assigned to an indicator """
-        for observable in to_remove:
-            observable_list.remove(observable)
-        return stix_indicators, observable_list
+            self.stix_indicators.append(stix_indicator)
 
-    def __create_stix_package(self, stix_props, indicators, observables):
+        for observable in to_remove:
+            self.loose_observables.remove(observable)
+
+
+
+    def __create_stix_package(self):
+        """
+        Creates the STIX XML. __process_observables and __process_indicators must be called before
+        """
+        try:
+            stix_properties = self.jsn['stix_header']
+            observables = self.jsn['observables']
+        except:
+            print "Error. No header passed."
+            return
+
+        stix_indicators = self.stix_indicators
+        loose_observables = self.loose_observables
+
+
         stix_id_generator = stix.utils.IDGenerator(namespace={"cert.siemens.com": "siemens_cert"})
         stix_id = stix_id_generator.create_id()
         #spec = MarkingSpecificationType(idref=stix_id)
@@ -133,36 +221,39 @@ class stixTransformer:
         #spec.set_Controlled_Structure("//node()")
         spec.controlled_structure = "//node()"
         #tlpmark = TLPMarkingStructureType()
-        #tlpmark.set_color(stix_props['stix_header_tlp'])
+        #tlpmark.set_color(stix_properties['stix_header_tlp'])
         tlpmark = TLPMarkingStructure()
-        tlpmark.color = stix_props['stix_header_tlp']
+        tlpmark.color = stix_properties['stix_header_tlp']
         #spec.set_Marking_Structure([tlpmark])
         spec.marking_structure = [tlpmark]
-        stix_package = STIXPackage(indicators=indicators, observables=observables, id_=stix_id)
+        stix_package = STIXPackage(indicators=stix_indicators, observables=Observables(loose_observables), id_=stix_id)
         stix_header = STIXHeader()
-        stix_header.title = stix_props['stix_header_title']
-        stix_header.description = stix_props['stix_header_description']
+        stix_header.title = stix_properties['stix_header_title']
+        stix_header.description = stix_properties['stix_header_description']
         stix_header.handling = Marking([spec])
         stix_information_source = InformationSource()
         stix_information_source.time = Time(produced_time=datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat())
         stix_information_source.tools = ToolInformationList([ToolInformation(tool_name="Mantis Authoring GUI", tool_vendor="Siemens CERT")])
         stix_header.information_source = stix_information_source
         stix_package.stix_header = stix_header
-        return stix_package.to_xml(ns_dict={'http://data-marking.mitre.org/Marking-1': 'stixMarking'})
-        #print stix_package.to_dict()
+        self.stix_package = stix_package.to_xml(ns_dict={'http://data-marking.mitre.org/Marking-1': 'stixMarking'})
+        return self.stix_package
 
-    def run(self):
-        observable_list = self.process_observables(self.jsn['observables'])
-        indicator_list, observable_list = self.iterate_indicators(self.jsn['indicators'], observable_list)
-        return self.__create_stix_package(self.jsn['stix_header'], indicator_list, Observables(observable_list))
+
+
+    def getStix(self):
+        try:
+            return self.stix_package
+        except:
+            return None
 
 
 
 if __name__ == '__main__':
     fn = sys.argv[1]
-    fp = open(fn)
-    jsn = json.load(fp)
-    fp.close()
+    with open(fn) as fp:
+        jsn = json.load(fp)
 
-    t = stixTransformer(jsn)
-    print t.run()
+    if jsn:
+        t = stixTransformer(jsn)
+        print t.run()
