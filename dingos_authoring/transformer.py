@@ -2,7 +2,7 @@
 
 import sys, datetime 
 import json, whois, pytz
-import importlib
+import importlib, uuid
 
 from cybox.core import Observable, Observables
 from cybox.common import Hash, String, Time, ToolInformation, ToolInformationList, ObjectProperties, DateTime, StructuredText
@@ -20,6 +20,11 @@ import stix.utils
 
 
 class stixTransformer:
+    """
+    Implements the transformer used to transform the JSON produced by
+    the MANTIS Authoring GUI into a valid STIX document.
+    """
+
     def __init__(self, jsn):
         NS = cybox.utils.Namespace("cert.siemens.com", "siemens_cert")
         cybox.utils.set_id_namespace(NS)
@@ -27,40 +32,74 @@ class stixTransformer:
         self.jsn = jsn
 
 
-    def iterate_observables(self, observables):
+
+    def process_observables(self, observables):
         cybox_observable_dict = {}
-        """ create observables """
+        relations = {}
+
+        # First collect all object relations.
+        for obs in observables:
+            relations[obs['observable_id']] = obs['related_observables']
+            
         for obs in observables:
             object_type = obs['observable_properties']['object_type']
-
             try:
                 im = importlib.import_module('dingos_authoring.transformer_classes.' + object_type.lower())
                 cls = im.transformer_class()
                 cybox_obs = cls.process(obs['observable_properties'])
             except Exception as e:
-                print "Unkown Type: %s" % (object_type)
+                print 'Error in module %s:' % object_type.lower(), e
                 continue
 
 
-            cybox_observable_dict[obs['observable_id']] = cybox_obs
-        """ create relations """
-        for obs in observables:
-            try:
-                current_object = cybox_observable_dict[obs['observable_id']]
-            except KeyError:
-                continue
-            relations = obs['related_observables']
-            for rel in relations:
-                try:
-                    related_object = cybox_observable_dict[rel]
-                    current_object.add_related(related_object, relations[rel], inline=False)
-                except KeyError:
-                    continue
-            cybox_observable_dict[obs['observable_id']] = current_object
-        cybox_observables = []
-        for obs_id in cybox_observable_dict:
-            cybox_observables.append(Observable(cybox_observable_dict[obs_id], obs_id))
-        return cybox_observables
+            if type(cybox_obs)==list: # We have multiple objects as result. We now need to create new ids and update the relations
+                new_ids = []
+                for no in cybox_obs:
+                    _tmp_id = '__' + str(uuid.uuid4())
+                    cybox_observable_dict[_tmp_id] = no
+                    new_ids.append(_tmp_id)
+                # Now find references to the old observable_id and replace with relations to the new ids.
+                # Instead of manipulation the ids, we just generate a new array of relations
+                old_id = obs['observable_id']
+                new_relations = {}
+                for obs_id, obs_rel in relations.iteritems():
+                    if obs_id==old_id: # our old object has relations to other objects
+                        for ni in new_ids: # for each new key ...
+                            new_relations[ni] = {}
+                            for ork, orv in obs_rel.iteritems(): # ... we insert the new relations
+                                if ork==old_id: # skip entries where we reference ourselfs
+                                    continue
+                                new_relations[ni][ork] = orv
+                    else: # our old object might be referenced by another one
+                        new_relations[obs_id] = {} #create old key
+                        #try to find relations to our old object...
+                        for ork, orv in obs_rel.iteritems():
+                            if ork==old_id: # Reference to our old key...
+                                for ni in new_ids: #..insert relation to each new key
+                                    new_relations[obs_id][ni] = orv
+                            else: #just insert. this has nothing to do with our old key
+                                new_relations[obs_id][ork] = orv
+                        pass
+                relations = new_relations
+
+            else: # only one object. No need to adjust relations or ids
+                cybox_observable_dict[obs['observable_id']] = cybox_obs
+
+
+        # Observables and relations are now processed. The only
+        # thing left is to include the relation into the actual
+        # objects.
+        cybox_observable_list = []
+        for obs_id, obs in cybox_observable_dict.iteritems():
+            for rel_id, rel_type in relations[obs_id].iteritems():
+                related_object = cybox_observable_dict[rel_id]
+                obs.add_related(related_object, rel_type, inline=False)
+            if not obs_id.startswith('__'): # If this is not a generated object we keep the observable id!
+                obs = Observable(obs, obs_id)
+            cybox_observable_list.append(obs)
+        #return cybox_observable_dict.values()
+        return cybox_observable_list
+
 
     def __create_stix_indicator(self, indicator):
         stix_indicator = Indicator(indicator['indicator_id'])
@@ -106,14 +145,14 @@ class stixTransformer:
         stix_header.handling = Marking([spec])
         stix_information_source = InformationSource()
         stix_information_source.time = Time(produced_time=datetime.datetime.now(pytz.timezone('Europe/Berlin')).isoformat())
-        stix_information_source.tools = ToolInformationList([ToolInformation(tool_name="GUI", tool_vendor="Siemens CERT")])
+        stix_information_source.tools = ToolInformationList([ToolInformation(tool_name="Mantis Authoring GUI", tool_vendor="Siemens CERT")])
         stix_header.information_source = stix_information_source
         stix_package.stix_header = stix_header
         return stix_package.to_xml(ns_dict={'http://data-marking.mitre.org/Marking-1': 'stixMarking'})
         #print stix_package.to_dict()
 
     def run(self):
-        observable_list = self.iterate_observables(self.jsn['observables'])
+        observable_list = self.process_observables(self.jsn['observables'])
         indicator_list, observable_list = self.iterate_indicators(self.jsn['indicators'], observable_list)
         return self.__create_stix_package(self.jsn['stix_header'], indicator_list, Observables(observable_list))
 

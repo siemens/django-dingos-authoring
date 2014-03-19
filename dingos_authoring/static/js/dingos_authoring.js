@@ -98,7 +98,7 @@
 	    $.each(instance.pool_elements_templates, function(i,v){
 		var div = $('<div class="dda-add-element clearfix" ></div>');
 		div.append(
-		    $('<object></object>').attr('data', $(v).find('#id_icon').val())
+		    $('<object></object>').attr('data', $(v).find('#id__icon').val())
 		    .attr('type', 'image/svg+xml')
 		    .addClass('pull-left')
 			.css({'width': '30px', 'margin-right': '5px'})
@@ -453,7 +453,7 @@
 	    $.each(instance.indicator_registry, function(indicator_guid, indicator_element){
 		var div = $('<div class="dda-add-element clearfix"></div>');
 		div.append(
-		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id_icon').val())
+		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id__icon').val())
 			.attr('type', 'image/svg+xml')
 			.addClass('pull-left')
 			.css({'width': '30px', 'margin-right': '5px'})
@@ -526,9 +526,6 @@
 
 
 
-	/*****for testing only*****/
-	// show json button
-
 	var get_jsn_btn = $('<button>Show JSON</button>').button().click(function(){
 	    result = JSON.stringify(instance.getJson(), null, "    ");
 	    var dlg = $('<div id="dda-show-json-dlg" title="JSON"><div id="dda-show-json-edit"></div></div>');
@@ -590,7 +587,6 @@
 	    );
 	});
 	$('#dda-stix-generate').after(import_jsn_btn);
-	/**********/
 
 
 
@@ -621,7 +617,7 @@
 		    'observable_title': $(v.element).find('[name="dda-observable-title"]').val(),
 		    'observable_description': $(v.element).find('[name="dda-observable-description"]').val(),
 		    'related_observables': {},
-		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').serializeObject()
+		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').not('[name^="_"]').serializeObject()
 		}
 
 		$.each(v.relations, function(i,v){

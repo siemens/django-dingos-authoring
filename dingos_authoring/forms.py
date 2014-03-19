@@ -1,6 +1,15 @@
 from django import forms
 from django.templatetags.static import static
 
+"""
+Classes describe front-end element. Element properties then show up in the resulting JSON as properties. 
+Properties with a leading '_' will not be converted to JSON
+
+e.g.
+_icon = defines the icon to show next to the element
+"""
+
+
 class StixIndicator(forms.Form):
     CONFIDENCE_TYPES = (
         ('high', 'High'),
@@ -12,7 +21,7 @@ class StixIndicator(forms.Form):
     indicator_title = forms.CharField(max_length=1024)
     indicator_description = forms.CharField(widget=forms.Textarea, required=False)
     indicator_confidence = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="med")
-    icon = forms.CharField(initial=static('img/stix/indicator.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/indicator.svg'), widget=forms.HiddenInput)
 
 class CyboxEmailObjectForm(forms.Form):
     object_type = forms.CharField(initial="EmailMessage", widget=forms.HiddenInput)
@@ -24,7 +33,7 @@ class CyboxEmailObjectForm(forms.Form):
     raw_header = forms.CharField(widget=forms.Textarea, required=False)
     raw_body = forms.CharField(widget=forms.Textarea, required=False)
     links = forms.CharField(widget=forms.Textarea, help_text="one link per line", required=False)
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 class CyboxFileObjectForm(forms.Form):
     object_type = forms.CharField(initial="File", widget=forms.HiddenInput)
@@ -35,14 +44,14 @@ class CyboxFileObjectForm(forms.Form):
     md5 = forms.CharField(max_length=32) # required to identify observable later in list
     sha1 = forms.CharField(max_length=40, required=False)
     sha256 = forms.CharField(max_length=64, required=False)
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 class CyboxDNSRecordObjectForm(forms.Form):
     object_type = forms.CharField(initial="DNSRecord", widget=forms.HiddenInput)
     domain_name = forms.CharField(max_length=1024) # required to identify observable later in list
     ip_address = forms.CharField(max_length=15, required=False)
     description = forms.CharField(widget=forms.Textarea, required=False)
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 class CyboxAddressObjectForm(forms.Form):
     CATEGORY_TYPES = (
@@ -64,14 +73,15 @@ class CyboxAddressObjectForm(forms.Form):
     is_source = forms.BooleanField(initial=False)
     is_destination = forms.BooleanField(initial=False)
     condition = forms.ChoiceField(choices=CONDITIONS_TYPES, required=False, initial="Equals")
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 
 
 class CyboxC2OjbectForm(forms.Form):
     object_type = forms.CharField(initial="C2Object", widget=forms.HiddenInput)
     data = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Copy & Paste your C2 Domains/IPs here line by line.'}), required=False)
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _multi = forms.CharField(initial=static('true'), widget=forms.HiddenInput)
 
 
 class CyboxArtifactObjectForm(forms.Form):
@@ -85,14 +95,14 @@ class CyboxArtifactObjectForm(forms.Form):
     object_type = forms.CharField(initial="Artifact", widget=forms.HiddenInput)
     artifact_type = forms.ChoiceField(choices=ARTIFACT_TYPES, required=False, initial="TYPE_GENERIC")
     data = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Paste your artifact here.'}), required=False)
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 
 class CyboxPortOjbectForm(forms.Form):
     object_type = forms.CharField(initial="Port", widget=forms.HiddenInput)
     port_value = forms.CharField(max_length=5, required=True)
     layer4_protocol = forms.CharField(max_length=1024, required=False)
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 
 class CyboxHTTPSessionObjectForm(forms.Form):
@@ -101,11 +111,8 @@ class CyboxHTTPSessionObjectForm(forms.Form):
     uri = forms.CharField(max_length=1024, required=False)
     host = forms.CharField(max_length=1024, required=False)
     port = forms.CharField(max_length=5, required=False)
-    referrer = forms.CharField(max_length=1024, required=False)
-    content_length = forms.CharField(max_length=1024, required=False)
-    content_type = forms.CharField(max_length=1024, required=False)
     user_agent = forms.CharField(max_length=1024, required=False)
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 
 class CyboxURIOjbectForm(forms.Form):
@@ -117,4 +124,4 @@ class CyboxURIOjbectForm(forms.Form):
     object_type = forms.CharField(initial="URI", widget=forms.HiddenInput)
     type_ = forms.ChoiceField(choices=URI_TYPES, required=False, initial="TYPE_URL")
     value = forms.CharField(max_length=2048, required=False)
-    icon = forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)

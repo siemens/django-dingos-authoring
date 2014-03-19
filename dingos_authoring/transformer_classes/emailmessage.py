@@ -60,7 +60,7 @@ class transformer_class(transformer_object):
             domain_list.extend(self.__reorder_domain_objects(domain_obj))
             domain_map[domain] = domain_obj['URI']
         for url in unique_urls:
-            url_obj = self.__create_cybox_url_object(url)
+            url_obj = self.create_cybox_uri_object(url)
             if not url_obj:
                 continue
             domain_obj = domain_map[whois.extract_domain(url)]
