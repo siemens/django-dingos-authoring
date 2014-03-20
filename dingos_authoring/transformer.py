@@ -29,6 +29,8 @@ class stixTransformer:
     namespace_name = "cert.siemens.com"
     namespace_prefix = "siemens_cert"
     stix_header = {}
+    stix_indicators = []
+    loose_observables = []
     indicators = {}
     observables = {}
     old_observable_mapping = {}
