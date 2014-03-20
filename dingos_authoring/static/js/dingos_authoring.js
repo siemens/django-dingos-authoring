@@ -1,6 +1,6 @@
- $(function() {
+$(function() {
 
-    function getCookie(name) {
+    function getCookie(name){
 	var cookieValue = null;
 	if (document.cookie && document.cookie != '') {
             var cookies = document.cookie.split(';');
@@ -16,11 +16,11 @@
 	return cookieValue;
     }
 
-    function csrfSafeMethod(method) {
+    function csrfSafeMethod(method){
 	// these HTTP methods do not require CSRF protection
 	return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
     }
-    function sameOrigin(url) {
+    function sameOrigin(url){
 	// test that a given url is a same-origin URL
 	// url could be relative or scheme relative or absolute
 	var host = document.location.host; // host + port
@@ -44,7 +44,7 @@
 	}
     });
 
-    function s4() {
+    function s4(){
 	return Math.floor((1 + Math.random()) * 0x10000)
             .toString(16)
             .substring(1);
@@ -53,15 +53,14 @@
 	return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
             s4() + '-' + s4() + s4() + s4();
     };
-    function uniqueArray(array) {
+    function uniqueArray(array){
 	return $.grep(array, function(el, index) {
             return index == $.inArray(el, array);
 	});
     }
 
 
-    $.fn.serializeObject = function()
-    {
+    $.fn.serializeObject = function(){
 	var o = {};
 	var a = this.serializeArray();
 	$.each(a, function() {
@@ -78,6 +77,7 @@
     };
 
 
+
     var builder = function(){
 	var instance = this;
 
@@ -92,21 +92,97 @@
 	this.element_registry = {};
 	this.indicator_registry = {};
 
+	/****************************************************************
+	 Init each tab
+	****************************************************************/
 
-	// Initializes the pool elements
-	this.init_pool_elements = function(){
+	// Stix package tab
+	this.init_stix_package_tab = function(){
+	    // Add various buttons to the tab's content; TODO: move to template
+	    var get_jsn_btn = $('<button>Show JSON</button>').button().click(function(){
+		result = JSON.stringify(instance.get_json(), null, "    ");
+		var dlg = $('<div id="dda-show-json-dlg" title="JSON"><div id="dda-show-json-edit"></div></div>');
+		dlg.dialog({
+		    width: 600, height: 750, modal: true,
+		    beforeClose: function( event, ui ) {
+			var editor = ace.edit('dda-show-json-edit');
+			editor.destroy();
+			$('#dda-show-json-edit').remove();
+		    },
+		    resizeStop: function( event, ui ) {
+			var editor = ace.edit('dda-show-json-edit');
+			editor.resize();
+		    }
+		});
+		var editor = ace.edit('dda-show-json-edit');
+		editor.setReadOnly(true);
+		editor.getSession().setMode("ace/mode/javascript");
+		editor.setValue(result);
+	    });
+	    $('#dda-stix-generate').after(get_jsn_btn);
+
+	    var import_jsn_btn = $('<button>Import JSON</button>').button().click(function(){
+		result = JSON.stringify(instance.get_json(), null, "    ");
+		var dlg = $('<div id="dda-import-json-dlg" title="JSON"><div id="dda-import-json-edit"></div></div>');
+		dlg.dialog({
+		    width: 600, height: 750, modal: true,
+		    beforeClose: function( event, ui ) {
+			var editor = ace.edit('dda-import-json-edit');
+			editor.destroy();
+			$('#dda-import-json-edit').remove();
+		    },
+		    resizeStop: function( event, ui ) {
+			var editor = ace.edit('dda-import-json-edit');
+			editor.resize();
+		    }
+		});
+		var editor = ace.edit('dda-import-json-edit');
+		editor.getSession().setMode("ace/mode/javascript");
+
+		var btn = $('<button class="pull-right">Ok</button>').button().click(function(){
+		    var ta_val = editor.getValue();
+		    try {
+			jsonlint.parse(ta_val);
+			ta_val = $.parseJSON(ta_val);
+		    }catch (err){
+			alert(err);
+			ta_val = '';
+		    }
+		    if(ta_val!=''){
+			instance.load_from_json(ta_val);
+			instance.refresh_stix_package_tab();
+			dlg.dialog('close');
+		    }
+		}).css('margin-right', '15px');
+		dlg.append(
+		    btn
+		);
+	    });
+	    $('#dda-stix-generate').after(import_jsn_btn);
+
+	};
+	this.init_stix_package_tab();	
+
+
+	// Observable pool tab
+	this.init_observable_pool_tab = function(){
 	    $.each(instance.pool_elements_templates, function(i,v){
 		var div = $('<div class="dda-add-element clearfix" ></div>');
 		div.append(
 		    $('<object></object>').attr('data', $(v).find('#id__icon').val())
-		    .attr('type', 'image/svg+xml')
-		    .addClass('pull-left')
+			.attr('type', 'image/svg+xml')
+			.addClass('pull-left')
 			.css({'width': '30px', 'margin-right': '5px'})
 		);
 		div.append(
-			$('<button>').addClass('dda-obs-add pull-right').html('Add').click(function(){
-			    instance.addElementToPool($(v).attr('id'));
-			})
+		    $('<button class="dda-obs-add pull-right"></button>').button({
+			icons: {
+			    primary: 'ui-icon-circle-plus'
+			},
+			text: false
+		    }).click(function(){
+			instance.obs_pool_add_elem($(v).attr('id'));
+		    })
 		);
 
 		var title = $('#id_object_type',v).val();
@@ -128,559 +204,26 @@
 	    });
 
 	};
-	this.init_pool_elements();
+	this.init_observable_pool_tab();
 
 
 
-
-
-	// Initializes the indicator tab.
-	this.init_indicator_tab = function(){
-
-	    // $.each(instance.pool_indicator_templates, function(i,v){
-	    // 	$('#dda-indicator-add-btn-menu').append(
-	    // 	    $('<li></li>').append(
-	    // 		$('<a href="#"></a>').html($(v).data('title')).click(function(){
-	    // 		    instance._add_indicator(v);
-	    // 		})
-	    // 	    )
-	    // 	);		
-	    // });	    
-	    // $('#dda-indicator-add-btn-menu').menu();
-
-	    $('#dda-indicator-add-btn').click(function(){
-		//$('#dda-indicator-add-btn-menu').toggle();
-		instance._add_indicator();
-	    });
-
-	};
-	this.init_indicator_tab();
-
-
-
-	// adds an indicator to the pool. gets passed the template id
-	// of the indicator. if template_id is not passed (in case
-	// user drops observable in package, the indicator shoud get
-	// generated), the function uses the first found template
-	this._add_indicator = function(template_id, guid_passed){
-	    var auto_gen = false;
-	    var template = false;
-
-	    if(!template_id){ // When user clicked the button
-		template = instance.pool_indicator_templates.first();
-		template_id = template.attr('id');
-		auto_gen = true;
-	    }else{
-		$.each(instance.pool_indicator_templates, function(i,v){
-		    if($(v).attr('id')==template_id){
-			template = v;
-			return false;
-		    }
-		});
-	    }
-	    if(template===false){
-		//TODO: template not found;
-		template = $();
-	    }
-
-	    // Get a new ID or use supplied one
-	    var guid = guid_gen();
-	    var guid_indicator = 'siemens_cert:' + template.find('#id_indicator_type').val() + '-' + guid;
-
-	    if(guid_passed)
-		guid_indicator = guid_passed;
-
-
-	    // Create element from template
-	    var _pc_el = template.clone().attr('id', guid_indicator);
-
-		
-	    // Create container element
-	    var div = $('<div class="dda-add-element"></div>');
-	    div.append(
-		$('<div class="clearfix" style="margin-bottom:5px;"></div>').append(
-		    $('<button>Remove</button>').button().addClass("dda-ind-remove pull-right").click(function(){
-			instance.removeIndicator(guid_indicator);
-		    }),
-		    $('<h3>' + guid_indicator + '</h3>').click(function(){
-			_pc_el.toggle();
-		    })
-		)
-	    );
-
-	    // Insert the element in the DOM
-	    div.append(_pc_el);
-	    instance.indicator_list.prepend(div);
-
-	    // Register the object internally
-	    instance.indicator_registry[guid_indicator] = {
-		template: template_id,
-		object_id: guid_indicator,
-		element: div,
-		description: template.data('description'),
-		observables: []
-	    };
-
-	    if(!auto_gen){
-		//instance.render_stix_tab();
-		$('#dda-indicator-add-btn-menu').toggle();
-	    }else{
-		return guid_indicator;
-	    }
-	};
-	this.removeIndicator = function(guid){
-	    instance.indicator_registry[guid].element.remove();
-	    delete instance.indicator_registry[guid];
-	    instance.render_stix_tab();
-	};
-
-
-
-
-
-
-	/*
-	 * Adds an element to the observable pool. Gets passed the template element
-	 */
-	this.addElementToPool = function(template_id, guid_passed){
-	    var template = $('#' + template_id);
-
-	    // Get a new id
-	    guid = guid_gen();
-	    guid_observable = 'siemens_cert:Observable-' + guid;
-	    if(guid_passed)
-		guid_observable = guid_passed;
-
-	    // Create new container element
-	    var div = $('<div class="dda-add-element clearfix" ></div>').data('id', guid_observable);
-	    
-	    // Create element from template
-	    var new_elem = template.clone().attr('id', guid_observable);
-	    var _pc_el = $('<div></div>').append( //container for toggling
-		$('<input type="text" name="dda-observable-title" placeholder="Observable Title"><textarea name="dda-observable-description" placeholder="Observable Description"></textarea>'),
-		$('<div class="dda-pool-element">').append(new_elem)
-	    );
-
-	    div.append(
-		$('<button>').addClass('dda-obs-remove pull-right').html('Remove').click(function(){
-		    instance.removeElementFromPool(div.data('id'));
-		})
-	    ).append($('<h3>'+guid_observable +'</h3>').click(function(){
-		_pc_el.toggle();
-	    }));
-
-	    var title = $('#id_object_type', template).val();
-	    var description = '';
-	    
-	    div.append('<p>'+title+'</p>');
-	    div.append( _pc_el );
-	    div.find('button').button();
-	    instance.pool_list.prepend(div);
-
-	    
-	    instance.element_registry[guid_observable] = {
-		observable_id: guid_observable,
-		relations: [],
-	    	template: template_id,
-		element: div,
-		description: description,
-		type: template.find('#id_object_type').val()
-	    };
-
-	};
-
-	this.removeElementFromPool = function(guid){
-
-	    //remove from indicators
-	    $.each(instance.indicator_registry, function(i,v){
-		var ni = [];
-		$.each(v.observables, function(i1,v1){
-		    if(v1!=guid)
-			ni.push(v1);
-		});
-		instance.indicator_registry[i].observables = ni;
-	    });
-
-	    //remove relation information
-	    $.each(instance.element_registry, function(i,v){
-		var ni = [];
-		$.each(v.relations, function(i1,v1){
-		    if(v1.target!=guid)
-			ni.push(v1);
-		});
-		instance.element_registry[i].relations = ni;
-		
-	    });
-
-	    //remove element itself
-	    instance.element_registry[guid].element.remove();
-	    delete instance.element_registry[guid];
-	};
-
-
-
-	/*
-	 * Helper function which returns a display name for a specific object
-	 */
-	this.getElementName = function(v, def, trim){
-	    trim=trim||60;
-
-	    desc = '';
-
-	    // Try the observable title
-	    desc = $.trim($('[name="dda-observable-title"]', v.element).val());
-	    // No Observable title? Try field specific information
-	    if(desc==''){
-		if(v.type == 'File'){
-		    desc = $(v.element).find('#id_file_name').val();
-		}else if(v.type == 'EmailMessage'){
-		    desc = $.trim($(v.element).find('#id_subject').val());
-		    if(desc=='')
-			desc = $.trim($(v.element).find('#id_from_').val());
-		}else if(v.type == 'DNSRecord'){
-		    desc = $.trim($(v.element).find('#id_domain_name').val());
-		}else if(v.type == 'Address'){
-		    desc = $.trim($(v.element).find('#id_ip_addr').val());
-		}else if(v.type == 'Artifact'){
-		    if($.trim($(v.element).find('#id_data').val())!='')
-			desc = $.trim($(v.element).find('#id_data').val());
-		}else if(v.type == 'C2Object'){
-		    if($.trim($(v.element).find('#id_data').val())!='')
-			desc = $.trim($(v.element).find('#id_data').val());
-		}else if(v.type == 'HTTPSession'){
-		    if($.trim($(v.element).find('#id_method').val())!='' && $.trim($(v.element).find('#id_host').val())!='')
-			desc = $.trim($(v.element).find('#id_method').val()) + ' to ' + $.trim($(v.element).find('#id_host').val())
-		    else if($.trim($(v.element).find('#id_uri').val())!='')
-			desc = $.trim($(v.element).find('#id_uri').val());
-		}else if(v.type == 'Port'){
-		    desc = $.trim($(v.element).find('#id_port_value').val());
-		    if($.trim($(v.element).find('#id_layer4_protocol').val())!='')
-			desc = desc + ' (' + $.trim($(v.element).find('#id_layer4_protocol').val()) + ')';
-		}else if(v.type == 'URI'){
-		    desc = $.trim($(v.element).find('#id_value').val());
+	// Indicator pool tab
+	this.init_indicator_pool_tab = function(){
+	    $('#dda-indicator-add-btn').button({
+		icons:{
+		    primary:  'ui-icon-circle-plus'
 		}
-	    }
-
-	    if(desc=='')
-		desc = def;
-
-	    if(desc.length>trim)
-		desc = desc.substring(0,trim-3) + '...';
-
-	    return desc	    
-	};
-
-
-
-
-
-	/*
-	 * if there is a item previewed in the relations tab, this
-	 * functions restores it to the ovservable pool. (the element
-	 * gets moved)
-	 */
-	this._restore_preview_observable = function(){
-	    var id = $('.dda-observable-template', '#dda-relation-object-details').first().attr('id');
-	    if(id){
-		$('> div', instance.element_registry[id].element).first().append(
-		    $('.dda-pool-element', '#dda-relation-object-details').remove()
-		);
-	    }
-	};
-
-	/*
-	 * Does some housekeeping in the observable pool
-	 * (usually when switching tabs)
-	 */
-	this.clean_observable_pool = function(){
-	    instance._restore_preview_observable();
-	};
-
-
-
-	/*
-	 * Renders the indicators on the package tab based on the object registries
-	 */
-	this.render_stix_tab = function(){
-	    // First clear all entries
-	    instance.package_indicators.html('');
-
-
-	    function isObservableInIndicator(id){
-		var ret = false;
-		$.each(instance.indicator_registry, function(i,v){
-		    if($.inArray(id, v.observables)!==-1){
-			ret = true;
-			return false;
-		    }
-		});
-		return ret;
-	    }
-	    
-	    //Init the observable pool
-	    instance.observable_pool.html('');
-	    $.each(instance.element_registry, function(i,v){
-		var div = $('<div class="dda-add-element clearfix" ></div>').data('id', i);
-		if(isObservableInIndicator(v.observable_id))
-		    div.append('<span class="pull-right">+</span>')
-		div.append('<h3>'+v.type+'</h3>');
-		desc = instance.getElementName(v, i);
-		div.append('<p>'+desc+'</p>');
-
-		div.draggable({
-		    "helper": "clone",
-		    "zIndex": 300,
-		    "refreshPositions": true,
-		    "start": function(event, ui) {
-			$(".dda-package-indicators_dropzone").addClass("dda-dropzone-highlight");
-		    },
-		    "stop": function(event, ui) {
-			$(".dda-package-indicators_dropzone").removeClass("dda-dropzone-highlight");
-		    }
-		});
-
-		instance.observable_pool.prepend(div);
-	    });
-
-
-
-	    // Add a dropzone element for dropping observables on non-indicators
-	    instance.package_indicators.append($('<div><p>Drop here to create new indicator</p></div>').addClass('dda-package-indicators_dropzone dda-package_top_drop'));
-
-
-
-	    // Iterate over the registred indicators
-	    $.each(instance.indicator_registry, function(indicator_guid, indicator_element){
-		var div = $('<div class="dda-add-element clearfix"></div>');
-		div.append(
-		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id__icon').val())
-			.attr('type', 'image/svg+xml')
-			.addClass('pull-left')
-			.css({'width': '30px', 'margin-right': '5px'})
-		);
-		
-		// Put the indicator title, use the 'title' input, or if empty, the guid
-		title = $('#id_indicator_title', indicator_element.element).val();
-		if(title=='')
-		    title = 'Indicator: ' + indicator_element.object_id
-		div.append('<h3>'+title+'</h3>');
-
-		// Add the indicator-guid to the dropzone so we know it when dropping onto
-		var refs = $('<div></div>').addClass('dda-package-indicators_dropzone').data('id', indicator_guid);
-		$.each(indicator_element.observables, function(i,v){
-		    desc = instance.getElementName(instance.element_registry[v], v);
-		    refs.append($('<div></div>').html(desc));
-		});
-		div.append(refs);
-		instance.package_indicators.append(div);
-	    });
-
-	    instance.package_indicators.find('.dda-package-indicators_dropzone').droppable({
-                "tolerance": "touch",
-                "drop": function( event, ui ) {
-		    if(!ui.draggable.hasClass('dda-add-element'))
-			return;
-		    var draggable = $(ui.draggable);
-		    var observable_id = $(draggable).data('id');
-		    var indicator_id = $(this).data('id');
-		    if(!indicator_id){ //if we drop on a non-indicator, we generate one
-			indicator_id = instance._add_indicator();
-		    }
-		    instance.indicator_registry[indicator_id].observables.push(observable_id);
-		    instance.indicator_registry[indicator_id].observables = uniqueArray(instance.indicator_registry[indicator_id].observables);
-		    instance.render_stix_tab();
-		},
-                "over": function (event, ui ) {
-		    if(ui.draggable.hasClass('dda-add-element'))
-			$(event.target).addClass("dda-dropzone-hover");
-                },
-                "out": function (event, ui) {
-		    $(event.target).removeClass("dda-dropzone-hover");
-                }
-	    });
-
-
-	    /*
-	     * Register generate button handler
-	     * and export data
-	     */
-	    $('#dda-stix-generate').off('click').on('click', function(){
-		stix_base = instance.getJson();
-		$('#dda-gen-output').slideUp('fast',function(){		    
-		    var editor = ace.edit('dda-gen-output-content');
-		    $.post('transform', {'j':JSON.stringify(stix_base)}, function(data){
-			if(data.xml !== undefined){
-			    $('#dda-gen-output').slideDown('fast');
-			    editor.setOptions({
-				maxLines: 50
-			    });
-			    editor.setReadOnly(true);
-			    editor.getSession().setMode("ace/mode/xml");
-			    editor.setValue(data.xml);
-			}
-		    }, 'json');
-		});
-		return false;
-	    });
-	};
-
-
-
-	var get_jsn_btn = $('<button>Show JSON</button>').button().click(function(){
-	    result = JSON.stringify(instance.getJson(), null, "    ");
-	    var dlg = $('<div id="dda-show-json-dlg" title="JSON"><div id="dda-show-json-edit"></div></div>');
-	    dlg.dialog({
-		width: 600, height: 750, modal: true,
-		beforeClose: function( event, ui ) {
-		    var editor = ace.edit('dda-show-json-edit');
-		    editor.destroy();
-		    $('#dda-show-json-edit').remove();
-		},
-		resizeStop: function( event, ui ) {
-		    var editor = ace.edit('dda-show-json-edit');
-		    editor.resize();
-		}
-	    });
-	    var editor = ace.edit('dda-show-json-edit');
-	    editor.setReadOnly(true);
-	    editor.getSession().setMode("ace/mode/javascript");
-	    editor.setValue(result);
-	});
-	$('#dda-stix-generate').after(get_jsn_btn);
-
-	// import button
-	var import_jsn_btn = $('<button>Import JSON</button>').button().click(function(){
-	    result = JSON.stringify(instance.getJson(), null, "    ");
-	    var dlg = $('<div id="dda-import-json-dlg" title="JSON"><div id="dda-import-json-edit"></div></div>');
-	    dlg.dialog({
-		width: 600, height: 750, modal: true,
-		beforeClose: function( event, ui ) {
-		    var editor = ace.edit('dda-import-json-edit');
-		    editor.destroy();
-		    $('#dda-import-json-edit').remove();
-		},
-		resizeStop: function( event, ui ) {
-		    var editor = ace.edit('dda-import-json-edit');
-		    editor.resize();
-		}
-	    });
-	    var editor = ace.edit('dda-import-json-edit');
-	    editor.getSession().setMode("ace/mode/javascript");
-
-	    var btn = $('<button class="pull-right">Ok</button>').button().click(function(){
-		var ta_val = editor.getValue();
-		try {
-		    jsonlint.parse(ta_val);
-		    ta_val = $.parseJSON(ta_val);
-		}catch (err){
-		    alert(err);
-		    ta_val = '';
-		}
-		if(ta_val!=''){
-		    instance.loadFromJson(ta_val);
-		    instance.render_stix_tab();
-		    dlg.dialog('close');
-		}
-	    }).css('margin-right', '15px');
-	    dlg.append(
-		    btn
-	    );
-	});
-	$('#dda-stix-generate').after(import_jsn_btn);
-
-
-
-
-
-	/*
-	 * Returns the JSON representation of the current configuration
-	 */
-	this.getJson = function(){
-	    //generated-time
-	    var stix_base = {
-		'stix_header': $('#dda-stix-meta').find('input, select, textarea').serializeObject(),
-		'incidents': [],
-		'indicators': [],
-		'observables': []
-	    }
-	    $.each(instance.indicator_registry, function(i,v){
-		var tmp = $(v.element).find('input, select, textarea').serializeObject();
-		tmp.related_observables = v.observables;
-		tmp.related_observables_condition = 'AND';
-		tmp.indicator_id = v.object_id;
-		stix_base.indicators.push(tmp);
-	    });
-
-	    $.each(instance.element_registry, function(i,v){
-		var tmp = {
-		    'observable_id': i,
-		    'observable_title': $(v.element).find('[name="dda-observable-title"]').val(),
-		    'observable_description': $(v.element).find('[name="dda-observable-description"]').val(),
-		    'related_observables': {},
-		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').not('[name^="_"]').serializeObject()
-		}
-
-		$.each(v.relations, function(i,v){
-		    tmp.related_observables[v.target] = v.label;
-		});
-		stix_base.observables.push(tmp);
-	    });
-	    return stix_base
-	};
-
-
-
-
-
-	/*
-	 * Tries to initialize the GUI from a provided JSON
-	 */
-	this.loadFromJson = function(jsn){
-	    // Restore Stix header information
-	    $.each(jsn.stix_header, function(i,v){
-		$('[name="'+i+'"]', '#dda-stix-meta').val(v);
-	    });
-
-	    // Restore indicators
-	    instance.indicator_registry = {};
-	    $.each(jsn.indicators, function(i,v){
-		instance._add_indicator(false, v.indicator_id);
-		var el = instance.indicator_registry[v.indicator_id];
-		$.each(v, function(i,v){
-		    //try to set values
-		    $('[name="'+i+'"]', el.element).val(v);
-		});
-		// Restore included observables
-		el.observables = v.related_observables;
-	    });
-
-	    // Restore observables
-	    instance.element_registry = {};
-	    $.each(jsn.observables, function(i,v){
-		var template = 'dda-observable-template_' + v.observable_properties.object_type;
-		//TODO: if template does not exitst. issue an error.
-		instance.addElementToPool(template, v.observable_id);
-		var el = instance.element_registry[v.observable_id];
-		
-		//restore title and description
-		el.element.find('[name="dda-observable-title"]').val(v.observable_title);
-		el.element.find('[name="dda-observable-description"]').val(v.observable_title);
-
-		$.each(v.observable_properties, function(i,v){
-		    //try to set values
-		    $('[name="'+i+'"]', el.element).val(v);
-		});
-		//restore related observables
-		$.each(v.related_observables, function(i,v){
-		    el.relations.push({label: v, target: i});
-		});
+	    }).click(function(){
+		instance.ind_pool_add_elem();
 	    });
 
 	};
+	this.init_indicator_pool_tab();
 
-
-
-	this.init_d3 = function(){
+	
+	// Object relations tab
+	this.init_object_relations_tab = function(){
             var getData = function(){
 		var data_set = [];
 		$.each(instance.element_registry, function(i,v){
@@ -1007,7 +550,7 @@
 		    if(i % 2 !== 0){
 			d3.select(this).select('tspan').remove();
 			d3.select(this).append('tspan').attr({'x': 0, 'y': '0em'}).text(d.node.type);
-			var _n = instance.getElementName(d.node, '', 13);
+			var _n = instance.get_obs_elem_display_name(d.node, '', 13);
 			if(_n!='')
 			    d3.select(this).append('tspan').attr({'x': 0, 'y': '1.2em'}).text(_n);
 		    }
@@ -1055,7 +598,7 @@
 			    if (mousedown_node) {
 				mouseup_node = d; 
 				if (mouseup_node == mousedown_node) { 
-				    instance._restore_preview_observable();
+				    instance.obs_elem_restore_from_preview();
 				    
 				    $('#dda-relation-object-details').append(
 					mouseup_node.element.find('.dda-pool-element')
@@ -1164,9 +707,495 @@
 
 	    instance._d3_redraw();
 	};
-	init_d3();
+	this.init_object_relations_tab();
 
 
+
+
+	/****************************************************************
+	 Refresh functions for each tab
+	***************************************************************/
+
+	// Stix package tab
+	this.refresh_stix_package_tab = function(){
+	    // First clear all entries
+	    instance.package_indicators.html('');
+
+
+	    function isObservableInIndicator(id){
+		var ret = false;
+		$.each(instance.indicator_registry, function(i,v){
+		    if($.inArray(id, v.observables)!==-1){
+			ret = true;
+			return false;
+		    }
+		});
+		return ret;
+	    }
+	    
+	    //Init the observable pool
+	    instance.observable_pool.html('');
+	    $.each(instance.element_registry, function(i,v){
+		var div = $('<div class="dda-add-element clearfix" ></div>').data('id', i);
+		if(isObservableInIndicator(v.observable_id))
+		    div.append('<span class="pull-right">+</span>')
+		div.append('<h3>'+v.type+'</h3>');
+		desc = instance.get_obs_elem_display_name(v, i);
+		div.append('<p>'+desc+'</p>');
+
+		div.draggable({
+		    "helper": "clone",
+		    "zIndex": 300,
+		    "refreshPositions": true,
+		    "start": function(event, ui) {
+			$(".dda-package-indicators_dropzone").addClass("dda-dropzone-highlight");
+		    },
+		    "stop": function(event, ui) {
+			$(".dda-package-indicators_dropzone").removeClass("dda-dropzone-highlight");
+		    }
+		});
+
+		instance.observable_pool.prepend(div);
+	    });
+
+
+	    // Add a dropzone element for dropping observables on non-indicators
+	    instance.package_indicators
+		.append($('<div><p>Drop here to create new indicator</p></div>')
+			.addClass('dda-package-indicators_dropzone dda-package_top_drop'));
+
+
+
+	    // Iterate over the registred indicators
+	    $.each(instance.indicator_registry, function(indicator_guid, indicator_element){
+		var div = $('<div class="dda-add-element clearfix"></div>');
+		div.append(
+		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id__icon').val())
+			.attr('type', 'image/svg+xml')
+			.addClass('pull-left')
+			.css({'width': '30px', 'margin-right': '5px'})
+		);
+		
+		// Put the indicator title, use the 'title' input, or if empty, the guid
+		title = $('#id_indicator_title', indicator_element.element).val();
+		if(title=='')
+		    title = 'Indicator: ' + indicator_element.object_id
+		div.append('<h3>'+title+'</h3>');
+
+		// Add the indicator-guid to the dropzone so we know it when dropping onto
+		var refs = $('<div></div>').addClass('dda-package-indicators_dropzone').data('id', indicator_guid);
+		$.each(indicator_element.observables, function(i,v){
+		    desc = instance.get_obs_elem_display_name(instance.element_registry[v], v);
+		    refs.append($('<div></div>').html(desc));
+		});
+		div.append(refs);
+		instance.package_indicators.append(div);
+	    });
+
+	    instance.package_indicators.find('.dda-package-indicators_dropzone').droppable({
+                "tolerance": "touch",
+                "drop": function( event, ui ) {
+		    if(!ui.draggable.hasClass('dda-add-element'))
+			return;
+		    var draggable = $(ui.draggable);
+		    var observable_id = $(draggable).data('id');
+		    var indicator_id = $(this).data('id');
+		    if(!indicator_id){ //if we drop on a non-indicator, we generate one
+			indicator_id = instance.ind_pool_add_elem();
+		    }
+		    instance.indicator_registry[indicator_id].observables.push(observable_id);
+		    instance.indicator_registry[indicator_id].observables = uniqueArray(instance.indicator_registry[indicator_id].observables);
+		    instance.refresh_stix_package_tab();
+		},
+                "over": function (event, ui ) {
+		    if(ui.draggable.hasClass('dda-add-element'))
+			$(event.target).addClass("dda-dropzone-hover");
+                },
+                "out": function (event, ui) {
+		    $(event.target).removeClass("dda-dropzone-hover");
+                }
+	    });
+
+
+	    /*
+	     * Register generate button handler
+	     * and export data
+	     */
+	    $('#dda-stix-generate').off('click').on('click', function(){
+		stix_base = instance.get_json();
+		$('#dda-gen-output').slideUp('fast',function(){		    
+		    var editor = ace.edit('dda-gen-output-content');
+		    $.post('transform', {'j':JSON.stringify(stix_base)}, function(data){
+			if(data.xml !== undefined){
+			    $('#dda-gen-output').slideDown('fast');
+			    editor.setOptions({
+				maxLines: 50
+			    });
+			    editor.setReadOnly(true);
+			    editor.getSession().setMode("ace/mode/xml");
+			    editor.setValue(data.xml);
+			}
+		    }, 'json');
+		});
+		return false;
+	    });
+	}
+
+	// Observable pool tab
+	this.refresh_observable_pool_tab = function(){
+	    // Do housekeeping, restore elements from the preview in the relations
+	    instance.obs_elem_restore_from_preview();
+	}
+
+	// Indicator pool tab
+	this.refresh_indicator_pool_tab = function(){
+	}
+
+	// Object relations tab
+	this.refresh_object_relations_tab = function(){
+	    b._d3_redraw(true);
+	}
+
+
+
+
+	/****************************************************************
+	 Functionality/Helper functions
+	***************************************************************/
+
+
+
+	/*
+	 * Adds an element to the observable pool. Gets passed a template id
+	 */
+	this.obs_pool_add_elem = function(template_id, guid_passed){
+	    var template = $('#' + template_id);
+
+	    // Get a new id
+	    guid = guid_gen();
+	    guid_observable = 'siemens_cert:Observable-' + guid;
+	    if(guid_passed)
+		guid_observable = guid_passed;
+
+	    // Create new container element
+	    var div = $('<div class="dda-add-element clearfix" ></div>').data('id', guid_observable);
+	    
+	    // Create element from template
+	    var new_elem = template.clone().attr('id', guid_observable);
+	    var _pc_el = $('<div></div>').append( //container for toggling
+		$('<input type="text" name="dda-observable-title" placeholder="Observable Title"><textarea name="dda-observable-description" placeholder="Observable Description"></textarea>'),
+		$('<div class="dda-pool-element">').append(new_elem)
+	    );
+
+	    div.append(
+		$('<button class="dda-obs-remove pull-right"></button>').button({
+		    icons:{
+			primary: 'ui-icon-trash'
+		    },
+		    text: false
+		}).click(function(){
+		    instance.obs_pool_remove_elem(div.data('id'));
+		})
+	    ).append($('<h3>'+guid_observable +'</h3>').click(function(){
+		_pc_el.toggle();
+	    }));
+
+	    var title = $('#id_object_type', template).val();
+	    var description = '';
+	    
+	    div.append('<p>'+title+'</p>');
+	    div.append( _pc_el );
+	    div.find('button').button();
+	    instance.pool_list.prepend(div);
+
+	    
+	    instance.element_registry[guid_observable] = {
+		observable_id: guid_observable,
+		relations: [],
+	    	template: template_id,
+		element: div,
+		description: description,
+		type: template.find('#id_object_type').val()
+	    };
+
+	};
+
+	/*
+	 * Removes an element from the observable pool.
+	 */
+	this.obs_pool_remove_elem = function(guid){
+
+	    //remove from indicators
+	    $.each(instance.indicator_registry, function(i,v){
+		var ni = [];
+		$.each(v.observables, function(i1,v1){
+		    if(v1!=guid)
+			ni.push(v1);
+		});
+		instance.indicator_registry[i].observables = ni;
+	    });
+
+	    //remove relation information
+	    $.each(instance.element_registry, function(i,v){
+		var ni = [];
+		$.each(v.relations, function(i1,v1){
+		    if(v1.target!=guid)
+			ni.push(v1);
+		});
+		instance.element_registry[i].relations = ni;
+		
+	    });
+
+	    //remove element itself
+	    instance.element_registry[guid].element.remove();
+	    delete instance.element_registry[guid];
+	};
+
+
+
+	/*
+	 * Helper function which returns a display name for a specific object
+	 */
+	this.get_obs_elem_display_name = function(v, def, trim){
+	    trim=trim||60;
+	    desc = '';
+
+	    // Try the observable title
+	    desc = $.trim($('[name="dda-observable-title"]', v.element).val());
+	    // No Observable title? Try field specific information
+	    if(desc==''){
+		if(v.type == 'File'){
+		    desc = $(v.element).find('#id_file_name').val();
+		}else if(v.type == 'EmailMessage'){
+		    desc = $.trim($(v.element).find('#id_subject').val());
+		    if(desc=='')
+			desc = $.trim($(v.element).find('#id_from_').val());
+		}else if(v.type == 'DNSRecord'){
+		    desc = $.trim($(v.element).find('#id_domain_name').val());
+		}else if(v.type == 'Address'){
+		    desc = $.trim($(v.element).find('#id_ip_addr').val());
+		}else if(v.type == 'Artifact'){
+		    if($.trim($(v.element).find('#id_data').val())!='')
+			desc = $.trim($(v.element).find('#id_data').val());
+		}else if(v.type == 'C2Object'){
+		    if($.trim($(v.element).find('#id_data').val())!='')
+			desc = $.trim($(v.element).find('#id_data').val());
+		}else if(v.type == 'HTTPSession'){
+		    if($.trim($(v.element).find('#id_method').val())!='' && $.trim($(v.element).find('#id_host').val())!='')
+			desc = $.trim($(v.element).find('#id_method').val()) + ' to ' + $.trim($(v.element).find('#id_host').val())
+		    else if($.trim($(v.element).find('#id_uri').val())!='')
+			desc = $.trim($(v.element).find('#id_uri').val());
+		}else if(v.type == 'Port'){
+		    desc = $.trim($(v.element).find('#id_port_value').val());
+		    if($.trim($(v.element).find('#id_layer4_protocol').val())!='')
+			desc = desc + ' (' + $.trim($(v.element).find('#id_layer4_protocol').val()) + ')';
+		}else if(v.type == 'URI'){
+		    desc = $.trim($(v.element).find('#id_value').val());
+		}
+	    }
+
+	    if(desc=='')
+		desc = def;
+
+	    if(desc.length>trim)
+		desc = desc.substring(0,trim-3) + '...';
+
+	    return desc	    
+	};
+
+
+
+
+	/*
+	 * Function that restores an element to the observable pool if
+	 * there is one in the preview on the relation tab (element
+	 * gets moved)
+	 */
+	this.obs_elem_restore_from_preview = function(){
+	    var id = $('.dda-observable-template', '#dda-relation-object-details').first().attr('id');
+	    if(id){
+		$('> div', instance.element_registry[id].element).first().append(
+		    $('.dda-pool-element', '#dda-relation-object-details').remove()
+		);
+	    }
+	};
+
+
+
+
+
+	/*
+	 * Adds an indicator to the indicator pool. Gets passed a
+	 * template id If template id is not passed (which happens
+	 * when user drops on specific placeholder, the first template
+	 * in the template pool will be used)
+	 */
+	this.ind_pool_add_elem = function(template_id, guid_passed){
+	    var auto_gen = false;
+	    var template = false;
+
+	    if(!template_id){ // When user clicked the button
+		template = instance.pool_indicator_templates.first();
+		template_id = template.attr('id');
+		auto_gen = true;
+	    }else{
+		$.each(instance.pool_indicator_templates, function(i,v){
+		    if($(v).attr('id')==template_id){
+			template = v;
+			return false;
+		    }
+		});
+	    }
+	    if(template===false){
+		//TODO: template not found;
+		template = $();
+	    }
+
+	    // Get a new ID or use supplied one
+	    var guid = guid_gen();
+	    var guid_indicator = 'siemens_cert:' + template.find('#id_indicator_type').val() + '-' + guid;
+
+	    if(guid_passed)
+		guid_indicator = guid_passed;
+
+
+	    // Create element from template
+	    var _pc_el = template.clone().attr('id', guid_indicator);
+
+	    
+	    // Create container element
+	    var div = $('<div class="dda-add-element"></div>');
+	    div.append(
+		$('<div class="clearfix" style="margin-bottom:5px;"></div>').append(
+		    $('<button class="dda-ind-remove pull-right"></button>').button({
+			icons:{
+			    primary: 'ui-icon-trash'
+			},
+			text: false
+		    }).click(function(){
+			instance.ind_pool_remove_elem(guid_indicator);
+		    }),
+		    $('<h3>' + guid_indicator + '</h3>').click(function(){
+			_pc_el.toggle();
+		    })
+		)
+	    );
+
+	    // Insert the element in the DOM
+	    div.append(_pc_el);
+	    instance.indicator_list.prepend(div);
+
+	    // Register the object internally
+	    instance.indicator_registry[guid_indicator] = {
+		template: template_id,
+		object_id: guid_indicator,
+		element: div,
+		description: template.data('description'),
+		observables: []
+	    };
+
+	    if(!auto_gen){
+		//instance.refresh_stix_package_tab();
+	    }else{
+		return guid_indicator;
+	    }
+	};
+	this.ind_pool_remove_elem = function(guid){
+	    instance.indicator_registry[guid].element.remove();
+	    delete instance.indicator_registry[guid];
+	    instance.refresh_stix_package_tab();
+	};
+
+
+
+
+
+
+
+	/*
+	 * Returns the JSON representation of the current configuration
+	 */
+	this.get_json = function(){
+	    //generated-time
+	    var stix_base = {
+		'stix_header': $('#dda-stix-meta').find('input, select, textarea').serializeObject(),
+		'incidents': [],
+		'indicators': [],
+		'observables': []
+	    }
+	    $.each(instance.indicator_registry, function(i,v){
+		var tmp = $('.dda-indicator-template', v.element).find('input, select, textarea').serializeObject();
+		tmp.related_observables = v.observables;
+		tmp.related_observables_condition = 'AND';
+		tmp.indicator_id = v.object_id;
+		stix_base.indicators.push(tmp);
+	    });
+
+	    $.each(instance.element_registry, function(i,v){
+		var tmp = {
+		    'observable_id': i,
+		    'observable_title': $(v.element).find('[name="dda-observable-title"]').val(),
+		    'observable_description': $(v.element).find('[name="dda-observable-description"]').val(),
+		    'related_observables': {},
+		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').not('[name^="_"]').serializeObject()
+		}
+
+		$.each(v.relations, function(i,v){
+		    tmp.related_observables[v.target] = v.label;
+		});
+		stix_base.observables.push(tmp);
+	    });
+	    return stix_base
+	};
+
+
+
+	/*
+	 * Tries to initialize the GUI from a provided JSON
+	 */
+	this.load_from_json = function(jsn){
+	    // Restore Stix header information
+	    $.each(jsn.stix_header, function(i,v){
+		$('[name="'+i+'"]', '#dda-stix-meta').val(v);
+	    });
+
+	    // Restore indicators
+	    instance.indicator_registry = {};
+	    $.each(jsn.indicators, function(i,v){
+		instance.ind_pool_add_elem(false, v.indicator_id);
+		var el = instance.indicator_registry[v.indicator_id];
+		$.each(v, function(i,v){
+		    //try to set values
+		    $('[name="'+i+'"]', el.element).val(v);
+		});
+		// Restore included observables
+		el.observables = v.related_observables;
+	    });
+
+	    // Restore observables
+	    instance.element_registry = {};
+	    $.each(jsn.observables, function(i,v){
+		var template = 'dda-observable-template_' + v.observable_properties.object_type;
+		//TODO: if template does not exitst. issue an error.
+		instance.obs_pool_add_elem(template, v.observable_id);
+		var el = instance.element_registry[v.observable_id];
+		
+		//restore title and description
+		el.element.find('[name="dda-observable-title"]').val(v.observable_title);
+		el.element.find('[name="dda-observable-description"]').val(v.observable_title);
+
+		$.each(v.observable_properties, function(i,v){
+		    //try to set values
+		    $('[name="'+i+'"]', el.element).val(v);
+		});
+		//restore related observables
+		$.each(v.related_observables, function(i,v){
+		    el.relations.push({label: v, target: i});
+		});
+	    });
+	};
+
+	// Return ourselfs
 	return instance;
     };
     var b = builder();
@@ -1177,16 +1206,16 @@
 	active: 1,
 	activate:function(event,ui){
 	    if(ui.newTab.index()==0){
-		// Render the Stix package tab
-		b.render_stix_tab();
+		b.refresh_stix_package_tab();
 	    }
 	    if(ui.newTab.index()==1){
-		// Do the housekeeping in the observable pool
-		b.clean_observable_pool();
+		b.refresh_observable_pool_tab();
+	    }
+	    if(ui.newTab.index()==2){
+		b.refresh_indicator_pool_tab();
 	    }
 	    if(ui.newTab.index()==3){
-		// Redraw the relation pane
-		b._d3_redraw(true);
+		b.refresh_object_relations_tab();
 	    }
         }
     });

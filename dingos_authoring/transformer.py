@@ -11,7 +11,6 @@ import cybox.utils
 from stix.indicator import Indicator
 from stix.core import STIXPackage, STIXHeader
 from stix.common import InformationSource, Confidence
-from stix.common.handling import Handling
 from stix.extensions.marking.tlp import TLPMarkingStructure
 from stix.data_marking import Marking, MarkingSpecification
 from stix.bindings.extensions.marking.tlp import TLPMarkingStructureType
@@ -29,6 +28,8 @@ class stixTransformer:
     namespace_name = "cert.siemens.com"
     namespace_prefix = "siemens_cert"
     stix_header = {}
+    stix_indicators = []
+    loose_observables = []
     indicators = {}
     observables = {}
     old_observable_mapping = {}
