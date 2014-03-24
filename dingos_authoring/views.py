@@ -24,13 +24,18 @@ def index(request):
 
     observableForms = []
     indicatorForms = []
+    campaignForms = []
     for obj_elem in dir(observables):
         if obj_elem.startswith("Cybox"):
             _cls = getattr(observables, obj_elem)
             observableForms.append(_cls())
-        elif obj_elem.startswith("Stix"):
+        elif obj_elem.startswith("StixIndicator"):
             _cls = getattr(observables, obj_elem)
             indicatorForms.append(_cls())
+        elif obj_elem.startswith("StixCampaign"):
+            _cls = getattr(observables, obj_elem)
+            campaignForms.append(_cls())
+            
 
 
     relations = [
@@ -66,6 +71,7 @@ def index(request):
         'title': 'Mantis Authoring',
         'observableForms': observableForms,
         'indicatorForms': indicatorForms,
+        'campaignForms': campaignForms,
         'relations': sorted(relations, key=itemgetter('label'))
     })
 
