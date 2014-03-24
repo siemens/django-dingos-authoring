@@ -1209,10 +1209,10 @@ $(function() {
 		b.refresh_stix_package_tab();
 	    }
 	    if(ui.newTab.index()==1){
-		b.refresh_observable_pool_tab();
+		b.refresh_indicator_pool_tab();
 	    }
 	    if(ui.newTab.index()==2){
-		b.refresh_indicator_pool_tab();
+		b.refresh_observable_pool_tab();
 	    }
 	    if(ui.newTab.index()==3){
 		b.refresh_object_relations_tab();

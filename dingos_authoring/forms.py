@@ -9,6 +9,37 @@ e.g.
 _icon = defines the icon to show next to the element
 """
 
+class StixCampaign(forms.Form):
+    STATUS_TYPES = (
+        ('Success', 'Success'),
+        ('Fail', 'Fail'),
+        ('Error', 'Error'),
+        ('Complete/Finish', 'Complete/Finish'),
+        ('Pending', 'Pending'),
+        ('Ongoing', 'Ongoing'),
+        ('Unknown', 'Unknown')
+    )
+    CONFIDENCE_TYPES = (
+        ('high', 'High'),
+        ('med', 'Medium'),
+        ('low', 'Low')
+    )
+    HANDLING_TYPES = (
+        ('white', 'White'),
+        ('green', 'Green'),
+        ('amber', 'Amber'),
+        ('red', 'Red')
+    )
+    campaign_type = forms.CharField(initial="Campaign", widget=forms.HiddenInput)
+    name = forms.CharField(max_length=1024)
+    title = forms.CharField(max_length=1024)
+    description = forms.CharField(widget=forms.Textarea, required=False)
+    status = forms.ChoiceField(choices=STATUS_TYPES, required=False, initial="Unknown")
+    activity_timestamp = forms.CharField(max_length=1024)
+    confidence = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="med")
+    handling = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="amber")
+    information_source = forms.CharField(max_length=1024)
+    _icon =  forms.CharField(initial=static('img/stix/campaign.svg'), widget=forms.HiddenInput)
 
 class StixIndicator(forms.Form):
     CONFIDENCE_TYPES = (

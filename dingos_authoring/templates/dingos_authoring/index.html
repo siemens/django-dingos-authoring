@@ -6,8 +6,8 @@
 <div id="dda-container-tabs">
   <ul>
     <li><a href="#dda-tab-1">Stix Package</a></li>
-    <li><a href="#dda-tab-2">Observable Pool</a></li>
-    <li><a href="#dda-tab-3">Indicator Pool</a></li>
+    <li><a href="#dda-tab-2">Indicator Pool</a></li>
+    <li><a href="#dda-tab-3">Observable Pool</a></li>
     <li><a href="#dda-tab-4">Object Relations</a></li>
   </ul>
 
@@ -48,9 +48,21 @@
     </div>
   </div>
 
+  <!-- Indicator Tab -->
+  <div id="dda-tab-2" class="l-2cr-fluid l-d-12"> 
+    <div class="grp-module">
+      <h2 class="clearfix">
+	Indicator Configuration
+	<button id="dda-indicator-add-btn" class="pull-right">Add Indicator</button>
+	<ul id="dda-indicator-add-btn-menu" style="display:none;"></ul>
+      </h2>
+      <div class="grp-row" id="dda-indicator-list"></div>
+    </div>
+  </div>
+
 
   <!-- Observable Pool Tab -->
-  <div id="dda-tab-2" class="l-2cr-fluid l-d-12"> 
+  <div id="dda-tab-3" class="l-2cr-fluid l-d-12"> 
     <div class="c-1">
       <div class="grp-module">
         <h2>Observable Templates</h2>
@@ -65,18 +77,6 @@
         <h2 id="dda-template-head" class="clearfix">Pool <button id="dda-template-head-toogle" class="pull-right">Toggle All</button> </h2>
         <div class="grp-row" id="dda-pool-list"></div>
       </div>
-    </div>
-  </div>
-
-  <!-- Indicator Tab -->
-  <div id="dda-tab-3" class="l-2cr-fluid l-d-12"> 
-    <div class="grp-module">
-      <h2 class="clearfix">
-	Indicator Configuration
-	<button id="dda-indicator-add-btn" class="pull-right">Add Indicator</button>
-	<ul id="dda-indicator-add-btn-menu" style="display:none;"></ul>
-      </h2>
-      <div class="grp-row" id="dda-indicator-list"></div>
     </div>
   </div>
 
@@ -107,6 +107,16 @@
   </div>
 </div>
 
+
+<div id="dda-campaign-template-pool" style="display:none;"> 
+ {% for campaignForm in campaignForms %}
+ <div class="dda-campaign-template" id="dda-campaign-template_{{ campaignForm.campaign_type.value }}">
+   <table>
+     {{ campaignForm.as_table }} 
+   </table>
+ </div>
+ {% endfor %} 
+</div>
 
 <div id="dda-observable-template-pool" style="display:none;"> 
  {% for observableForm in observableForms %}
