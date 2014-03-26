@@ -3,10 +3,7 @@ from django.templatetags.static import static
 
 """
 Classes describe front-end element. Element properties then show up in the resulting JSON as properties. 
-Properties with a leading '_' will not be converted to JSON
-
-e.g.
-_icon = defines the icon to show next to the element
+Properties with a leading 'I_' will not be converted to JSON
 """
 
 class StixThreatActor(forms.Form):
@@ -15,7 +12,9 @@ class StixThreatActor(forms.Form):
         ('med', 'Medium'),
         ('low', 'Low')
     )
-    threatactor_type = forms.CharField(initial="ThreatActor", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="ThreatActor", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Threat Actor", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/threat_actor.svg'), widget=forms.HiddenInput)
     identity_name = forms.CharField(max_length=1024, help_text="Required if Campaign/ThreatActor should be generated")
     identity_aliases = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Line by line aliases of this threat actor'}), required=False, )
     title = forms.CharField(max_length=1024)
@@ -45,7 +44,9 @@ class StixCampaign(forms.Form):
         ('amber', 'Amber'),
         ('red', 'Red')
     )
-    campaign_type = forms.CharField(initial="Campaign", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="Campaign", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Campaign", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/campaign.svg'), widget=forms.HiddenInput)
     name = forms.CharField(max_length=1024, help_text="Required if Campaign/ThreatActor should be generated")
     title = forms.CharField(max_length=1024)
     description = forms.CharField(widget=forms.Textarea, required=False)
@@ -55,7 +56,7 @@ class StixCampaign(forms.Form):
     confidence = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="med")
     handling = forms.ChoiceField(choices=HANDLING_TYPES, required=False, initial="amber")
     information_source = forms.CharField(max_length=1024)
-    _icon =  forms.CharField(initial=static('img/stix/campaign.svg'), widget=forms.HiddenInput)
+
 
 class StixIndicator(forms.Form):
     CONFIDENCE_TYPES = (
@@ -63,15 +64,19 @@ class StixIndicator(forms.Form):
         ('med', 'Medium'),
         ('low', 'Low')
     )
-    indicator_type = forms.CharField(initial="Indicator", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="Indicator", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Indicator", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/indicator.svg'), widget=forms.HiddenInput)
     indicator_producer = forms.CharField(max_length=1024)
     indicator_title = forms.CharField(max_length=1024)
     indicator_description = forms.CharField(widget=forms.Textarea, required=False)
     indicator_confidence = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="med")
-    _icon =  forms.CharField(initial=static('img/stix/indicator.svg'), widget=forms.HiddenInput)
+
 
 class CyboxEmailObjectForm(forms.Form):
-    object_type = forms.CharField(initial="EmailMessage", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="EmailMessage", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Email Message", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     from_ = forms.CharField(max_length=256, required=False)
     to = forms.CharField(widget=forms.Textarea(attrs={'placeholder':"Recipients line by line"}), required=False)
     subject = forms.CharField(max_length=1024) # required to identify observable later in list
@@ -80,25 +85,28 @@ class CyboxEmailObjectForm(forms.Form):
     raw_header = forms.CharField(widget=forms.Textarea, required=False)
     raw_body = forms.CharField(widget=forms.Textarea, required=False)
     links = forms.CharField(widget=forms.Textarea(attrs={'placeholder':'Links line by line'}), required=False)
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+
 
 class CyboxFileObjectForm(forms.Form):
-    object_type = forms.CharField(initial="File", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="File", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="File", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     file_name = forms.CharField(required=False)
     file_path = forms.CharField(required=False)
-    #file_extension = forms.CharField(max_length=256, required=False)
     file_size = forms.IntegerField(required=False)
     md5 = forms.CharField(max_length=32) # required to identify observable later in list
     sha1 = forms.CharField(max_length=40, required=False)
     sha256 = forms.CharField(max_length=64, required=False)
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+
 
 class CyboxDNSRecordObjectForm(forms.Form):
-    object_type = forms.CharField(initial="DNSRecord", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="DNSRecord", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="DNS Record", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     domain_name = forms.CharField(max_length=1024) # required to identify observable later in list
     ip_address = forms.CharField(max_length=15, required=False)
     description = forms.CharField(widget=forms.Textarea, required=False)
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+
 
 class CyboxAddressObjectForm(forms.Form):
     CATEGORY_TYPES = (
@@ -113,22 +121,23 @@ class CyboxAddressObjectForm(forms.Form):
         ('Contains', 'Contains'),
         ('Equals', 'Equals')
     )
+    I_object_type = forms.CharField(initial="Address", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Address", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     observable_id = forms.CharField(initial="", widget=forms.HiddenInput)
-    object_type = forms.CharField(initial="Address", widget=forms.HiddenInput)
     ip_addr = forms.CharField(max_length=45)
     category = forms.ChoiceField(choices=CATEGORY_TYPES, required=False, initial="ipv4-addr")
     is_source = forms.BooleanField(initial=False)
     is_destination = forms.BooleanField(initial=False)
     condition = forms.ChoiceField(choices=CONDITIONS_TYPES, required=False, initial="Equals")
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
-
 
 
 class CyboxC2OjbectForm(forms.Form):
-    object_type = forms.CharField(initial="C2Object", widget=forms.HiddenInput)
-    data = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Copy & Paste your Command and Control Domains/IPs here line by line.'}), required=False)
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="C2Object", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Command & Control Domains/IPs", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     _multi = forms.CharField(initial=static('true'), widget=forms.HiddenInput)
+    data = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Copy & Paste your Command and Control Domains/IPs here line by line.'}), required=False)
 
 
 class CyboxArtifactObjectForm(forms.Form):
@@ -139,27 +148,30 @@ class CyboxArtifactObjectForm(forms.Form):
         ('TYPE_NETWORK', 'Network Traffic'),
         ('TYPE_GENERIC', 'Generic Data Region')
     )
-    object_type = forms.CharField(initial="Artifact", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="Artifact", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Artifact", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     artifact_type = forms.ChoiceField(choices=ARTIFACT_TYPES, required=False, initial="TYPE_GENERIC")
     data = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Paste your artifact here.'}), required=False)
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 
 class CyboxPortOjbectForm(forms.Form):
-    object_type = forms.CharField(initial="Port", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="Port", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Port", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     port_value = forms.CharField(max_length=5, required=True)
     layer4_protocol = forms.CharField(max_length=1024, required=False)
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 
 class CyboxHTTPSessionObjectForm(forms.Form):
-    object_type = forms.CharField(initial="HTTPSession", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="HTTPSession", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="HTTP Session", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     method = forms.CharField(max_length=1024, required=False)
     uri = forms.CharField(max_length=1024, required=False)
     host = forms.CharField(max_length=1024, required=False)
     port = forms.CharField(max_length=5, required=False)
     user_agent = forms.CharField(max_length=1024, required=False)
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 
 class CyboxURIOjbectForm(forms.Form):
@@ -168,7 +180,8 @@ class CyboxURIOjbectForm(forms.Form):
         ('TYPE_GENERAL', 'General URN'),
         ('TYPE_DOMAIN', 'Domain Name')
     )
-    object_type = forms.CharField(initial="URI", widget=forms.HiddenInput)
+    I_object_type = forms.CharField(initial="URI", widget=forms.HiddenInput)
+    I_object_display_name = forms.CharField(initial="Generic URI", widget=forms.HiddenInput)
+    I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     type_ = forms.ChoiceField(choices=URI_TYPES, required=False, initial="TYPE_URL")
     value = forms.CharField(max_length=2048, required=False)
-    _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)

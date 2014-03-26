@@ -121,7 +121,7 @@
 
 <div id="dda-campaign-template-pool" style="display:none;"> 
  {% for campaignForm in campaignForms %}
- <div class="dda-campaign-template" id="dda-campaign-template_{{ campaignForm.campaign_type.value }}">
+ <div class="dda-campaign-template" id="dda-campaign-template_{{ campaignForm.I_object_type.value }}">
    <table>
      {{ campaignForm.as_table }} 
    </table>
@@ -131,7 +131,7 @@
 
 <div id="dda-threatactor-template-pool" style="display:none;"> 
  {% for threatActorForm in threatActorForms %}
- <div class="dda-threatactor-template" id="dda-threatactor-template_{{ threatActorForm.threatactor_type.value }}">
+ <div class="dda-threatactor-template" id="dda-threatactor-template_{{ threatActorForm.I_object_type.value }}">
    <table>
      {{ threatActorForm.as_table }} 
    </table>
@@ -141,7 +141,7 @@
 
 <div id="dda-observable-template-pool" style="display:none;"> 
  {% for observableForm in observableForms %}
- <div class="dda-observable-template" id="dda-observable-template_{{ observableForm.object_type.value }}">
+ <div class="dda-observable-template" id="dda-observable-template_{{ observableForm.I_object_type.value }}">
    <table>
      {{ observableForm.as_table }} 
    </table>
@@ -152,7 +152,7 @@
 
 <div id="dda-indicator-template-pool" style="display:none;"> 
  {% for indicatorForm in indicatorForms %}
- <div class="dda-indicator-template"  id="dda-indicator-template_{{ indicatorForm.indicator_type.value }}">
+ <div class="dda-indicator-template"  id="dda-indicator-template_{{ indicatorForm.I_object_type.value }}">
    <table>
      {{ indicatorForm.as_table }} 
    </table>

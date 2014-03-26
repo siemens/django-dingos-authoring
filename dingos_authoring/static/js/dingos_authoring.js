@@ -229,7 +229,7 @@ $(function() {
 	    $.each(instance.pool_elements_templates, function(i,v){
 		var div = $('<div class="dda-add-element clearfix" ></div>');
 		div.append(
-		    $('<object></object>').attr('data', $(v).find('#id__icon').val())
+		    $('<object></object>').attr('data', $(v).find('#id_I_icon').val())
 			.attr('type', 'image/svg+xml')
 			.addClass('pull-left')
 			.css({'width': '30px', 'margin-right': '5px'})
@@ -245,7 +245,7 @@ $(function() {
 		    })
 		);
 
-		var title = $('#id_object_type',v).val();
+		var title = $('#id_I_object_display_name',v).val();
 		var description = '';
 		
 		div.append('<h3>'+title+'</h3>');
@@ -610,7 +610,7 @@ $(function() {
 		    if(i % 2 !== 0){
 			d3.select(this).select('tspan').remove();
 			d3.select(this).append('tspan').attr({'x': 0, 'y': '0em'}).text(d.node.type);
-			var _n = instance.get_obs_elem_display_name(d.node, '', 13);
+			var _n = instance.get_obs_elem_desc_name(d.node, '', 13);
 			if(_n!='')
 			    d3.select(this).append('tspan').attr({'x': 0, 'y': '1.2em'}).text(_n);
 		    }
@@ -799,8 +799,8 @@ $(function() {
 		var div = $('<div class="dda-add-element clearfix" ></div>').data('id', i);
 		if(isObservableInIndicator(v.observable_id))
 		    div.append('<span class="pull-right">+</span>')
-		div.append('<h3>'+v.type+'</h3>');
-		desc = instance.get_obs_elem_display_name(v, i);
+		div.append('<h3>'+$('#id_I_object_display_name', $('#'+v.template)).val()+'</h3>');
+		desc = instance.get_obs_elem_desc_name(v, i);
 		div.append('<p>'+desc+'</p>');
 
 		div.draggable({
@@ -830,7 +830,7 @@ $(function() {
 	    $.each(instance.indicator_registry, function(indicator_guid, indicator_element){
 		var div = $('<div class="dda-add-element clearfix"></div>');
 		div.append(
-		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id__icon').val())
+		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id_I_icon').val())
 			.attr('type', 'image/svg+xml')
 			.addClass('pull-left')
 			.css({'width': '30px', 'margin-right': '5px'})
@@ -845,7 +845,7 @@ $(function() {
 		// Add the indicator-guid to the dropzone so we know it when dropping onto
 		var refs = $('<div></div>').addClass('dda-package-indicators_dropzone').data('id', indicator_guid);
 		$.each(indicator_element.observables, function(i,v){
-		    desc = instance.get_obs_elem_display_name(instance.observable_registry[v], v);
+		    desc = instance.get_obs_elem_desc_name(instance.observable_registry[v], v);
 		    refs.append($('<div></div>').html(desc));
 		});
 		div.append(refs);
@@ -964,7 +964,7 @@ $(function() {
 		_pc_el.toggle();
 	    }));
 
-	    var title = $('#id_object_type', template).val();
+	    var title = $('#id_I_object_display_name', template).val();
 	    var description = '';
 	    
 	    div.append('<p>'+title+'</p>');
@@ -979,7 +979,7 @@ $(function() {
 	    	template: template_id,
 		element: div,
 		description: description,
-		type: template.find('#id_object_type').val()
+		type: template.find('#id_I_object_type').val()
 	    };
 
 	};
@@ -1020,7 +1020,7 @@ $(function() {
 	/*
 	 * Helper function which returns a display name for a specific object
 	 */
-	this.get_obs_elem_display_name = function(v, def, trim){
+	this.get_obs_elem_desc_name = function(v, def, trim){
 	    trim=trim||60;
 	    desc = '';
 
@@ -1117,7 +1117,7 @@ $(function() {
 
 	    // Get a new ID or use supplied one
 	    var guid = guid_gen();
-	    var guid_indicator = 'siemens_cert:' + template.find('#id_indicator_type').val() + '-' + guid;
+	    var guid_indicator = 'siemens_cert:' + template.find('#id_I_object_type').val() + '-' + guid;
 
 	    if(guid_passed)
 		guid_indicator = guid_passed;
@@ -1205,7 +1205,7 @@ $(function() {
 		    'observable_title': $(v.element).find('[name="dda-observable-title"]').val(),
 		    'observable_description': $(v.element).find('[name="dda-observable-description"]').val(),
 		    'related_observables': {},
-		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').not('[name^="_"]').serializeObject()
+		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').not('[name^="I_"]').serializeObject()
 		}
 
 		$.each(v.relations, function(i,v){
@@ -1216,7 +1216,7 @@ $(function() {
 
 	    // Inlucde the campaing information
 	    stix_base.campaign = $('#dda-campaign-template_Campaign', '#dda-campaign-container')
-		.find('input, select, textarea').not('[name^="_"]').serializeObject();
+		.find('input, select, textarea').not('[name^="I_"]').serializeObject();
 	    //special for the tstamp
 //	    stix_base.campaign.activity_timestamp_from = $('#dda-campaign-template_Campaign', '#dda-campaign-container').find('#id_activity_timestamp_from').datetimepicker('getDate');
 //	    if(stix_base.campaign.activity_timestamp_from!=null)
@@ -1225,7 +1225,7 @@ $(function() {
 //	    if(stix_base.campaign.activity_timestamp_to!=null)
 //		stix_base.campaign.activity_timestamp_to = stix_base.campaign.activity_timestamp_to.getTime()/1000;
 	    stix_base.campaign.threatactor = $('#dda-threatactor-template_ThreatActor', '#dda-campaign-container')
-		.find('input, select, textarea').not('[name^="_"]').serializeObject();
+		.find('input, select, textarea').not('[name^="I_"]').serializeObject();
 
 	    return stix_base
 	};
