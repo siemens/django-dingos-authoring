@@ -130,7 +130,7 @@ button span {
     margin-bottom: 15px;
 }
 
-.dda-add-element table, .dda-observable-template table{
+.dda-campaign-template table, .dda-threatactor-template table, .dda-add-element table, .dda-observable-template table{
     width: 100%;
 }
 #dda-indicator-list > .dda-add-element table textarea, #dda-pool-list > .dda-add-element table textarea {
@@ -142,11 +142,15 @@ button span {
     margin-top: 20px;
 }
 
+.dda-campaign-template input, 
+.dda-threatactor-template input, 
 .dda-observable-template input, 
 .dda-indicator-template input, 
 .dda-add-element input {
     width: 100%;
 }
+.dda-campaign-template textarea, 
+.dda-threatactor-template textarea, 
 .dda-observable-template textarea, 
 .dda-indicator-template textarea,
 .dda-add-element textarea{
@@ -182,11 +186,6 @@ button span {
 
 .dda-package-indicators_dropzone {
     margin-top: 15px;
-}
-
-#dda-pool-list .helptext {
-    margin-top: 5px;
-    display: block;
 }
 
 .dda-package_top_drop {
@@ -277,3 +276,25 @@ button span {
     resize: vertical;
     min-height: 30px;
 }
+
+
+.helptext {
+    margin-top: 5px;
+    display: block;
+}
+
+
+
+
+/* css for timepicker */
+.ui-timepicker-div .ui-widget-header { margin-bottom: 8px; }
+.ui-timepicker-div dl { text-align: left; }
+.ui-timepicker-div dl dt { float: left; clear:left; padding: 0 0 0 5px; }
+.ui-timepicker-div dl dd { margin: 0 10px 10px 45%; }
+.ui-timepicker-div td { font-size: 90%; }
+.ui-tpicker-grid-label { background: none; border: none; margin: 0; padding: 0; }
+
+.ui-timepicker-rtl{ direction: rtl; }
+.ui-timepicker-rtl dl { text-align: right; padding: 0 5px 0 0; }
+.ui-timepicker-rtl dl dt{ float: right; clear: right; }
+.ui-timepicker-rtl dl dd { margin: 0 45% 10px 10px; }

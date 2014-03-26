@@ -9,6 +9,21 @@ e.g.
 _icon = defines the icon to show next to the element
 """
 
+class StixThreatActor(forms.Form):
+    CONFIDENCE_TYPES = (
+        ('high', 'High'),
+        ('med', 'Medium'),
+        ('low', 'Low')
+    )
+    threatactor_type = forms.CharField(initial="ThreatActor", widget=forms.HiddenInput)
+    identity_name = forms.CharField(max_length=1024, help_text="Required if Campaign/ThreatActor should be generated")
+    identity_aliases = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Line by line aliases of this threat actor'}), required=False, )
+    title = forms.CharField(max_length=1024)
+    description = forms.CharField(widget=forms.Textarea, required=False)
+    confidence = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="med")
+    information_source = forms.CharField(max_length=1024)
+
+
 class StixCampaign(forms.Form):
     STATUS_TYPES = (
         ('Success', 'Success'),
@@ -31,13 +46,14 @@ class StixCampaign(forms.Form):
         ('red', 'Red')
     )
     campaign_type = forms.CharField(initial="Campaign", widget=forms.HiddenInput)
-    name = forms.CharField(max_length=1024)
+    name = forms.CharField(max_length=1024, help_text="Required if Campaign/ThreatActor should be generated")
     title = forms.CharField(max_length=1024)
     description = forms.CharField(widget=forms.Textarea, required=False)
     status = forms.ChoiceField(choices=STATUS_TYPES, required=False, initial="Unknown")
-    activity_timestamp = forms.CharField(max_length=1024)
+    activity_timestamp_from = forms.CharField(max_length=1024)
+    activity_timestamp_to = forms.CharField(max_length=1024)
     confidence = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="med")
-    handling = forms.ChoiceField(choices=CONFIDENCE_TYPES, required=False, initial="amber")
+    handling = forms.ChoiceField(choices=HANDLING_TYPES, required=False, initial="amber")
     information_source = forms.CharField(max_length=1024)
     _icon =  forms.CharField(initial=static('img/stix/campaign.svg'), widget=forms.HiddenInput)
 
@@ -57,13 +73,13 @@ class StixIndicator(forms.Form):
 class CyboxEmailObjectForm(forms.Form):
     object_type = forms.CharField(initial="EmailMessage", widget=forms.HiddenInput)
     from_ = forms.CharField(max_length=256, required=False)
-    to = forms.CharField(widget=forms.Textarea, help_text="one recipient per line", required=False)
+    to = forms.CharField(widget=forms.Textarea(attrs={'placeholder':"Recipients line by line"}), required=False)
     subject = forms.CharField(max_length=1024) # required to identify observable later in list
     in_reply_to = forms.CharField(max_length=1024, required=False)
     received_date = forms.CharField(required=False)
     raw_header = forms.CharField(widget=forms.Textarea, required=False)
     raw_body = forms.CharField(widget=forms.Textarea, required=False)
-    links = forms.CharField(widget=forms.Textarea, help_text="one link per line", required=False)
+    links = forms.CharField(widget=forms.Textarea(attrs={'placeholder':'Links line by line'}), required=False)
     _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
 
 class CyboxFileObjectForm(forms.Form):
@@ -110,7 +126,7 @@ class CyboxAddressObjectForm(forms.Form):
 
 class CyboxC2OjbectForm(forms.Form):
     object_type = forms.CharField(initial="C2Object", widget=forms.HiddenInput)
-    data = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Copy & Paste your C2 Domains/IPs here line by line.'}), required=False)
+    data = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Copy & Paste your Command and Control Domains/IPs here line by line.'}), required=False)
     _icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     _multi = forms.CharField(initial=static('true'), widget=forms.HiddenInput)
 
