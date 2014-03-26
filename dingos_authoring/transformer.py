@@ -198,6 +198,8 @@ class stixTransformer:
         for obs_id, obs in cybox_observable_dict.iteritems():
             for rel_id, rel_type in relations[obs_id].iteritems():
                 related_object = cybox_observable_dict[rel_id]
+                if not related_object: # This might happen if a observable was not generated(because data was missing); TODO!
+                    continue
                 obs.add_related(related_object, rel_type, inline=False)
             if not obs_id.startswith('__'): # If this is not a generated object we keep the observable id!
                 obs = Observable(obs, obs_id)
@@ -218,7 +220,7 @@ class stixTransformer:
         stix_indicator.title = String(indicator['indicator_title'])
         stix_indicator.description = String(indicator['indicator_description'])
         stix_indicator.confidence = Confidence(indicator['indicator_confidence'])
-        stix_indicator.indicator_types = String(indicator['indicator_type'])
+        stix_indicator.indicator_types = String(indicator['object_type'])
         return stix_indicator, indicator['related_observables']
 
 

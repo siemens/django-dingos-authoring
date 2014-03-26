@@ -979,7 +979,7 @@ $(function() {
 	    	template: template_id,
 		element: div,
 		description: description,
-		type: template.find('#id_I_object_type').val()
+		type: template.find('#id_object_type').val()
 	    };
 
 	};
@@ -1117,7 +1117,7 @@ $(function() {
 
 	    // Get a new ID or use supplied one
 	    var guid = guid_gen();
-	    var guid_indicator = 'siemens_cert:' + template.find('#id_I_object_type').val() + '-' + guid;
+	    var guid_indicator = 'siemens_cert:' + template.find('#id_object_type').val() + '-' + guid;
 
 	    if(guid_passed)
 		guid_indicator = guid_passed;
@@ -1278,12 +1278,12 @@ $(function() {
 
 	    // Restore the campaign information
 	    $.each(jsn.campaign, function(i,v){
-		$('#dda-campaign-template_Campaign', '#dda-campaign-container').find('[name="'+i1+'"]').val(v1);
+		$('#dda-campaign-template_Campaign', '#dda-campaign-container').find('[name="'+i+'"]').val(v);
 	    });
 
 	    // Restore the threat actor information
 	    $.each(jsn.campaign.threatactor, function(i,v){
-		$('#dda-threatactor-template_ThreatActor', '#dda-campaign-container').find('[name="'+i1+'"]').val(v1);
+		$('#dda-threatactor-template_ThreatActor', '#dda-campaign-container').find('[name="'+i+'"]').val(v);
 	    });
 	};
 
