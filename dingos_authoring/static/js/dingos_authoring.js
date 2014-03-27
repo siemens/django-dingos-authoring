@@ -85,11 +85,13 @@ $(function() {
 	this.pool_elements = $('#dda-pool-elements');
 	this.pool_elements_templates = $('#dda-observable-template-pool > div');
 	this.pool_indicator_templates = $('#dda-indicator-template-pool > div');
+	this.pool_campaign_templates = $('#dda-campaign-template-pool > div');
+	this.pool_threatactor_templates = $('#dda-threatactor-template-pool > div');
 	this.observable_pool = $('#dda-observable-pool');
 	this.indicator_list = $('#dda-indicator-list');
 	this.package_indicators = $('#dda-package-indicators');
 
-	this.element_registry = {};
+	this.observable_registry = {};
 	this.indicator_registry = {};
 
 	/****************************************************************
@@ -164,12 +166,70 @@ $(function() {
 	this.init_stix_package_tab();	
 
 
+
+	// Campaign tab
+	this.init_campaign_tab = function(){
+	    var template = instance.pool_campaign_templates.first();
+	    var ne = template.clone();
+	    var from = ne.find('#id_activity_timestamp_from');
+	    var to = ne.find('#id_activity_timestamp_to');
+
+	    from.datetimepicker({ 
+		timeFormat: 'HH:mm z',
+		onClose: function(dateText, inst) {
+		    if (to.val() != '') {
+			var testStartDate = from.datetimepicker('getDate');
+			var testEndDate = to.datetimepicker('getDate');
+			if (testStartDate > testEndDate)
+			    to.datetimepicker('setDate', testStartDate);
+		    }
+		    else {
+			to.val(dateText);
+		    }
+		},
+		onSelect: function (selectedDateTime){
+		    to.datetimepicker('option', 'minDate', from.datetimepicker('getDate') );
+		}
+	    });
+	    to.datetimepicker({ 
+		timeFormat: 'HH:mm z',
+		onClose: function(dateText, inst) {
+		    if (from.val() != '') {
+			var testStartDate = from.datetimepicker('getDate');
+			var testEndDate = to.datetimepicker('getDate');
+			if (testStartDate > testEndDate)
+			    from.datetimepicker('setDate', testEndDate);
+		    }
+		    else {
+			from.val(dateText);
+		    }
+		},
+		onSelect: function (selectedDateTime){
+		    from.datetimepicker('option', 'maxDate', to.datetimepicker('getDate') );
+		}
+	    });
+	    $('#dda-campaign-container').append(ne);
+
+	    
+	    // We inject the threat actor information right after the
+	    // campaign info, because currently, we only allow one
+	    // campaign and one threat actor associated with it
+	    var ta_template = instance.pool_threatactor_templates.first();
+	    ne.after(ta_template.clone())
+		.after('<br><h3>Threat Actor Information</h3>');
+	    
+	};
+	this.init_campaign_tab();
+
+
+
+
 	// Observable pool tab
 	this.init_observable_pool_tab = function(){
 	    $.each(instance.pool_elements_templates, function(i,v){
 		var div = $('<div class="dda-add-element clearfix" ></div>');
 		div.append(
-		    $('<object></object>').attr('data', $(v).find('#id__icon').val())
+		    $('<object></object>').attr('data', $(v).find('#id_I_icon').val())
 			.attr('type', 'image/svg+xml')
 			.addClass('pull-left')
 			.css({'width': '30px', 'margin-right': '5px'})
@@ -185,7 +245,7 @@ $(function() {
 		    })
 		);
 
-		var title = $('#id_object_type',v).val();
+		var title = $('#id_I_object_display_name',v).val();
 		var description = '';
 		
 		div.append('<h3>'+title+'</h3>');
@@ -226,7 +286,7 @@ $(function() {
 	this.init_object_relations_tab = function(){
             var getData = function(){
 		var data_set = [];
-		$.each(instance.element_registry, function(i,v){
+		$.each(instance.observable_registry, function(i,v){
                     data_set.push(v);
 		});
 		return data_set;
@@ -252,7 +312,7 @@ $(function() {
 
 	    var getLabelAnchors = function(){
 		var data_set = [];
-		$.each(instance.element_registry, function(i,v){
+		$.each(instance.observable_registry, function(i,v){
 		    // Push twice for object pairs; Link will then be like 0,1 - 2,3 - 4,5
                     data_set.push({
 			node: v,
@@ -275,7 +335,7 @@ $(function() {
 	    var getLabelAnchorLinks = function(){
 		var node_set = [];
 		var c = 0;
-		$.each(instance.element_registry, function(i,v){
+		$.each(instance.observable_registry, function(i,v){
 		    node_set.push({
 			source : c * 2,
 			target : c * 2 + 1
@@ -550,7 +610,7 @@ $(function() {
 		    if(i % 2 !== 0){
 			d3.select(this).select('tspan').remove();
 			d3.select(this).append('tspan').attr({'x': 0, 'y': '0em'}).text(d.node.type);
-			var _n = instance.get_obs_elem_display_name(d.node, '', 13);
+			var _n = instance.get_obs_elem_desc_name(d.node, '', 13);
 			if(_n!='')
 			    d3.select(this).append('tspan').attr({'x': 0, 'y': '1.2em'}).text(_n);
 		    }
@@ -611,7 +671,7 @@ $(function() {
 				var link = {source: mousedown_node, target: mouseup_node};
 
 				//check if relation already exists
-				var rel = instance.element_registry[mousedown_node.observable_id].relations;
+				var rel = instance.observable_registry[mousedown_node.observable_id].relations;
 				rel_exists=false;
 				$.each(rel, function(i,v){
 				    if(v.target==mouseup_node.observable_id){
@@ -622,7 +682,7 @@ $(function() {
 
 				if(!rel_exists){
 
-				    instance.element_registry[mousedown_node.observable_id].relations.push({
+				    instance.observable_registry[mousedown_node.observable_id].relations.push({
 					label: $('input[name="dda-selected-relation"]:checked').val(),
 					target: mouseup_node.observable_id
 				    });
@@ -686,13 +746,13 @@ $(function() {
 			var src = selected_link.source.observable_id;
 			var tgt = selected_link.target.observable_id;
 
-			var source_relations = instance.element_registry[src].relations
+			var source_relations = instance.observable_registry[src].relations
 			var new_rel = [];
 			$.each(source_relations, function(i,v){
 			    if(v.target!=tgt)
 				new_rel.push(v);
 			});
-			instance.element_registry[src].relations = new_rel;
+			instance.observable_registry[src].relations = new_rel;
 
 			links.splice(links.indexOf(selected_link), 1);
 		    }
@@ -735,12 +795,12 @@ $(function() {
 	    
 	    //Init the observable pool
 	    instance.observable_pool.html('');
-	    $.each(instance.element_registry, function(i,v){
+	    $.each(instance.observable_registry, function(i,v){
 		var div = $('<div class="dda-add-element clearfix" ></div>').data('id', i);
 		if(isObservableInIndicator(v.observable_id))
 		    div.append('<span class="pull-right">+</span>')
-		div.append('<h3>'+v.type+'</h3>');
-		desc = instance.get_obs_elem_display_name(v, i);
+		div.append('<h3>'+$('#id_I_object_display_name', $('#'+v.template)).val()+'</h3>');
+		desc = instance.get_obs_elem_desc_name(v, i);
 		div.append('<p>'+desc+'</p>');
 
 		div.draggable({
@@ -770,7 +830,7 @@ $(function() {
 	    $.each(instance.indicator_registry, function(indicator_guid, indicator_element){
 		var div = $('<div class="dda-add-element clearfix"></div>');
 		div.append(
-		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id__icon').val())
+		    $('<object></object>').attr('data', $('#' + indicator_element.template).find('#id_I_icon').val())
 			.attr('type', 'image/svg+xml')
 			.addClass('pull-left')
 			.css({'width': '30px', 'margin-right': '5px'})
@@ -785,7 +845,7 @@ $(function() {
 		// Add the indicator-guid to the dropzone so we know it when dropping onto
 		var refs = $('<div></div>').addClass('dda-package-indicators_dropzone').data('id', indicator_guid);
 		$.each(indicator_element.observables, function(i,v){
-		    desc = instance.get_obs_elem_display_name(instance.element_registry[v], v);
+		    desc = instance.get_obs_elem_desc_name(instance.observable_registry[v], v);
 		    refs.append($('<div></div>').html(desc));
 		});
 		div.append(refs);
@@ -829,7 +889,7 @@ $(function() {
 			if(data.xml !== undefined){
 			    $('#dda-gen-output').slideDown('fast');
 			    editor.setOptions({
-				maxLines: 50
+				maxLines: Infinity
 			    });
 			    editor.setReadOnly(true);
 			    editor.getSession().setMode("ace/mode/xml");
@@ -839,6 +899,10 @@ $(function() {
 		});
 		return false;
 	    });
+	}
+	
+	// Campaign info tab
+	this.refresh_campaign_tab = function(){
 	}
 
 	// Observable pool tab
@@ -900,7 +964,7 @@ $(function() {
 		_pc_el.toggle();
 	    }));
 
-	    var title = $('#id_object_type', template).val();
+	    var title = $('#id_I_object_display_name', template).val();
 	    var description = '';
 	    
 	    div.append('<p>'+title+'</p>');
@@ -909,7 +973,7 @@ $(function() {
 	    instance.pool_list.prepend(div);
 
 	    
-	    instance.element_registry[guid_observable] = {
+	    instance.observable_registry[guid_observable] = {
 		observable_id: guid_observable,
 		relations: [],
 	    	template: template_id,
@@ -936,19 +1000,19 @@ $(function() {
 	    });
 
 	    //remove relation information
-	    $.each(instance.element_registry, function(i,v){
+	    $.each(instance.observable_registry, function(i,v){
 		var ni = [];
 		$.each(v.relations, function(i1,v1){
 		    if(v1.target!=guid)
 			ni.push(v1);
 		});
-		instance.element_registry[i].relations = ni;
+		instance.observable_registry[i].relations = ni;
 		
 	    });
 
 	    //remove element itself
-	    instance.element_registry[guid].element.remove();
-	    delete instance.element_registry[guid];
+	    instance.observable_registry[guid].element.remove();
+	    delete instance.observable_registry[guid];
 	};
 
 
@@ -956,7 +1020,7 @@ $(function() {
 	/*
 	 * Helper function which returns a display name for a specific object
 	 */
-	this.get_obs_elem_display_name = function(v, def, trim){
+	this.get_obs_elem_desc_name = function(v, def, trim){
 	    trim=trim||60;
 	    desc = '';
 
@@ -1014,7 +1078,7 @@ $(function() {
 	this.obs_elem_restore_from_preview = function(){
 	    var id = $('.dda-observable-template', '#dda-relation-object-details').first().attr('id');
 	    if(id){
-		$('> div', instance.element_registry[id].element).first().append(
+		$('> div', instance.observable_registry[id].element).first().append(
 		    $('.dda-pool-element', '#dda-relation-object-details').remove()
 		);
 	    }
@@ -1053,7 +1117,7 @@ $(function() {
 
 	    // Get a new ID or use supplied one
 	    var guid = guid_gen();
-	    var guid_indicator = 'siemens_cert:' + template.find('#id_indicator_type').val() + '-' + guid;
+	    var guid_indicator = 'siemens_cert:' + template.find('#id_object_type').val() + '-' + guid;
 
 	    if(guid_passed)
 		guid_indicator = guid_passed;
@@ -1119,10 +1183,13 @@ $(function() {
 	    //generated-time
 	    var stix_base = {
 		'stix_header': $('#dda-stix-meta').find('input, select, textarea').serializeObject(),
+		'campaign': {},
 		'incidents': [],
 		'indicators': [],
 		'observables': []
 	    }
+
+	    // Include the indicators
 	    $.each(instance.indicator_registry, function(i,v){
 		var tmp = $('.dda-indicator-template', v.element).find('input, select, textarea').serializeObject();
 		tmp.related_observables = v.observables;
@@ -1131,13 +1198,14 @@ $(function() {
 		stix_base.indicators.push(tmp);
 	    });
 
-	    $.each(instance.element_registry, function(i,v){
+	    // Include the observables
+	    $.each(instance.observable_registry, function(i,v){
 		var tmp = {
 		    'observable_id': i,
 		    'observable_title': $(v.element).find('[name="dda-observable-title"]').val(),
 		    'observable_description': $(v.element).find('[name="dda-observable-description"]').val(),
 		    'related_observables': {},
-		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').not('[name^="_"]').serializeObject()
+		    'observable_properties': $(v.element).find('.dda-pool-element').find('input, select, textarea').not('[name^="I_"]').serializeObject()
 		}
 
 		$.each(v.relations, function(i,v){
@@ -1145,6 +1213,20 @@ $(function() {
 		});
 		stix_base.observables.push(tmp);
 	    });
+
+	    // Inlucde the campaing information
+	    stix_base.campaign = $('#dda-campaign-template_Campaign', '#dda-campaign-container')
+		.find('input, select, textarea').not('[name^="I_"]').serializeObject();
+	    //special for the tstamp
+//	    stix_base.campaign.activity_timestamp_from = $('#dda-campaign-template_Campaign', '#dda-campaign-container').find('#id_activity_timestamp_from').datetimepicker('getDate');
+//	    if(stix_base.campaign.activity_timestamp_from!=null)
+//		stix_base.campaign.activity_timestamp_from = stix_base.campaign.activity_timestamp_from.getTime()/1000;
+//            stix_base.campaign.activity_timestamp_to = $('#dda-campaign-template_Campaign', '#dda-campaign-container').find('#id_activity_timestamp_to').datetimepicker('getDate');
+//	    if(stix_base.campaign.activity_timestamp_to!=null)
+//		stix_base.campaign.activity_timestamp_to = stix_base.campaign.activity_timestamp_to.getTime()/1000;
+	    stix_base.campaign.threatactor = $('#dda-threatactor-template_ThreatActor', '#dda-campaign-container')
+		.find('input, select, textarea').not('[name^="I_"]').serializeObject();
+
 	    return stix_base
 	};
 
@@ -1173,12 +1255,12 @@ $(function() {
 	    });
 
 	    // Restore observables
-	    instance.element_registry = {};
+	    instance.observable_registry = {};
 	    $.each(jsn.observables, function(i,v){
 		var template = 'dda-observable-template_' + v.observable_properties.object_type;
 		//TODO: if template does not exitst. issue an error.
 		instance.obs_pool_add_elem(template, v.observable_id);
-		var el = instance.element_registry[v.observable_id];
+		var el = instance.observable_registry[v.observable_id];
 		
 		//restore title and description
 		el.element.find('[name="dda-observable-title"]').val(v.observable_title);
@@ -1192,6 +1274,16 @@ $(function() {
 		$.each(v.related_observables, function(i,v){
 		    el.relations.push({label: v, target: i});
 		});
+	    });
+
+	    // Restore the campaign information
+	    $.each(jsn.campaign, function(i,v){
+		$('#dda-campaign-template_Campaign', '#dda-campaign-container').find('[name="'+i+'"]').val(v);
+	    });
+
+	    // Restore the threat actor information
+	    $.each(jsn.campaign.threatactor, function(i,v){
+		$('#dda-threatactor-template_ThreatActor', '#dda-campaign-container').find('[name="'+i+'"]').val(v);
 	    });
 	};
 
@@ -1209,12 +1301,15 @@ $(function() {
 		b.refresh_stix_package_tab();
 	    }
 	    if(ui.newTab.index()==1){
-		b.refresh_indicator_pool_tab();
+		b.refresh_campaign_tab();
 	    }
 	    if(ui.newTab.index()==2){
-		b.refresh_observable_pool_tab();
+		b.refresh_indicator_pool_tab();
 	    }
 	    if(ui.newTab.index()==3){
+		b.refresh_observable_pool_tab();
+	    }
+	    if(ui.newTab.index()==4){
 		b.refresh_object_relations_tab();
 	    }
         }

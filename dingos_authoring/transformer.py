@@ -5,12 +5,16 @@ import json, whois, pytz
 import importlib, uuid
 
 from cybox.core import Observable, Observables
-from cybox.common import Hash, String, Time, ToolInformation, ToolInformationList, ObjectProperties, DateTime, StructuredText
+from cybox.common import Hash, String, Time, ToolInformation, ToolInformationList, ObjectProperties, DateTime
 import cybox.utils
 
 from stix.indicator import Indicator
+from stix.campaign import Campaign, AssociatedCampaigns, Names, Name
+from stix.threat_actor import ThreatActor
 from stix.core import STIXPackage, STIXHeader
-from stix.common import InformationSource, Confidence
+from stix.common import InformationSource, Confidence, Identity, Activity, DateTimeWithPrecision, StructuredText as StixStructuredText, VocabString as StixVocabString
+from stix.common.identity import RelatedIdentities
+from stix.common.related import RelatedCampaign
 from stix.extensions.marking.tlp import TLPMarkingStructure
 from stix.data_marking import Marking, MarkingSpecification
 from stix.bindings.extensions.marking.tlp import TLPMarkingStructureType
@@ -29,7 +33,8 @@ class stixTransformer:
     namespace_prefix = "siemens_cert"
     stix_header = {}
     stix_indicators = []
-    loose_observables = []
+    campaign = None
+    threatactor = None
     indicators = {}
     observables = {}
     old_observable_mapping = {}
@@ -57,10 +62,68 @@ class stixTransformer:
         # Now process the parts
         self.__process_observables()
         self.__process_indicators()
+        self.__process_campaigns()
         self.__create_stix_package()
 
 
 
+    def __process_campaigns(self):
+        """
+        Processes the campaigns JSON part
+        """
+        try:
+            campaign = self.jsn['campaign']
+        except:
+            print "Error. No threat campaigns passed."
+            return
+
+
+        try:
+            threatactor = campaign['threatactor']
+        except:
+            print "Error. No threat actor passed."
+            return
+
+        if not campaign['name'] or not threatactor['identity_name']:
+            return
+
+        camp = Campaign()
+        camp.names =  Names(Name(campaign['name']))
+        camp.title = campaign['title']
+        camp.description = campaign['description']
+        camp.confidence = Confidence(campaign['confidence'])
+        camp.handling = TLPMarkingStructure()
+        camp.handling.color = campaign['handling']
+        camp.information_source = InformationSource()
+        camp.information_source.description = campaign['information_source']
+        camp.status = StixVocabString(campaign['status'])
+        afrom = Activity()
+        afrom.date_time = DateTimeWithPrecision(value=campaign['activity_timestamp_from'], precision="minute")
+        afrom.description = StixStructuredText('from timestamp')
+        ato = Activity()
+        ato.date_time = DateTimeWithPrecision(value=campaign['activity_timestamp_to'], precision="minute")
+        ato.description = StixStructuredText('to timestamp')
+        camp.activity = [afrom, ato]
+        self.campaign = camp
+
+
+        tac = ThreatActor()
+        related_identities = []
+        for ia in threatactor['identity_aliases'].split('\n'):
+            related_identities.append(Identity(None, None, ia))
+        tac.identity = Identity(None, None, threatactor['identity_name'])
+        tac.identity.related_identities = RelatedIdentities(related_identities)
+        tac.title = String(threatactor['title'])
+        tac.description = StixStructuredText(threatactor['description'])
+        tac.information_source = InformationSource()
+        tac.information_source.description = threatactor['information_source']
+        tac.confidence = Confidence(threatactor['confidence'])
+        tac.associated_campaigns = camp
+
+        self.threatactor = tac
+
+        
+        
 
     def __process_observables(self):
         """
@@ -89,7 +152,6 @@ class stixTransformer:
             except Exception as e:
                 print 'Error in module %s:' % object_type.lower(), e
                 continue
-
 
             if type(cybox_obs)==list: # We have multiple objects as result. We now need to create new ids and update the relations
                 old_id = obs['observable_id']
@@ -136,6 +198,8 @@ class stixTransformer:
         for obs_id, obs in cybox_observable_dict.iteritems():
             for rel_id, rel_type in relations[obs_id].iteritems():
                 related_object = cybox_observable_dict[rel_id]
+                if not related_object: # This might happen if a observable was not generated(because data was missing); TODO!
+                    continue
                 obs.add_related(related_object, rel_type, inline=False)
             if not obs_id.startswith('__'): # If this is not a generated object we keep the observable id!
                 obs = Observable(obs, obs_id)
@@ -156,19 +220,18 @@ class stixTransformer:
         stix_indicator.title = String(indicator['indicator_title'])
         stix_indicator.description = String(indicator['indicator_description'])
         stix_indicator.confidence = Confidence(indicator['indicator_confidence'])
-        stix_indicator.indicator_types = String(indicator['indicator_type'])
+        stix_indicator.indicator_types = String(indicator['object_type'])
         return stix_indicator, indicator['related_observables']
 
 
 
     def __process_indicators(self):
         """
-        Processes the indicator JSON part. 
-        Sets the stix_indicators and the loose_observables which will
-        be picked up by the create_stix_package.
-        (observables referenced in an indicator will be included there
-        while loose observables are not inlcluded in any indicator and
-        will just be appended to the package by create_stix_package)
+        Processes the indicator JSON part. Sets the stix_indicators
+        which be picked up by the create_stix_package. (observables
+        referenced in an indicator will be included there while loose
+        observables are not inlcluded in any indicator and will just
+        be appended to the package by create_stix_package)
         """
         if not self.cybox_observable_list:
             print "Error. Cybox observables not prepared"
@@ -222,7 +285,7 @@ class stixTransformer:
         tlpmark.color = stix_properties['stix_header_tlp']
         #spec.set_Marking_Structure([tlpmark])
         spec.marking_structure = [tlpmark]
-        stix_package = STIXPackage(indicators=stix_indicators, observables=Observables(self.cybox_observable_list), id_=stix_id)
+        stix_package = STIXPackage(indicators=stix_indicators, observables=Observables(self.cybox_observable_list), id_=stix_id, threat_actors=self.threatactor)
         stix_header = STIXHeader()
         stix_header.title = stix_properties['stix_header_title']
         stix_header.description = stix_properties['stix_header_description']

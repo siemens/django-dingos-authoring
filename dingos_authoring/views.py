@@ -29,6 +29,7 @@ def index(request):
     observableForms = []
     indicatorForms = []
     campaignForms = []
+    threatActorForms = []
     for obj_elem in dir(observables):
         if obj_elem.startswith("Cybox"):
             _cls = getattr(observables, obj_elem)
@@ -39,6 +40,9 @@ def index(request):
         elif obj_elem.startswith("StixCampaign"):
             _cls = getattr(observables, obj_elem)
             campaignForms.append(_cls())
+        elif obj_elem.startswith("StixThreatActor"):
+            _cls = getattr(observables, obj_elem)
+            threatActorForms.append(_cls())
             
 
 
@@ -76,6 +80,7 @@ def index(request):
         'observableForms': observableForms,
         'indicatorForms': indicatorForms,
         'campaignForms': campaignForms,
+        'threatActorForms': threatActorForms,
         'relations': sorted(relations, key=itemgetter('label'))
     })
 

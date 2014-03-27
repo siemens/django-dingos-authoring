@@ -6,9 +6,10 @@
 <div id="dda-container-tabs">
   <ul>
     <li><a href="#dda-tab-1">Stix Package</a></li>
-    <li><a href="#dda-tab-2">Indicator Pool</a></li>
-    <li><a href="#dda-tab-3">Observable Pool</a></li>
-    <li><a href="#dda-tab-4">Object Relations</a></li>
+    <li><a href="#dda-tab-2">Campaign Info</a></li>
+    <li><a href="#dda-tab-3">Indicator Pool</a></li>
+    <li><a href="#dda-tab-4">Observable Pool</a></li>
+    <li><a href="#dda-tab-5">Observable Relations</a></li>
   </ul>
 
 
@@ -48,8 +49,18 @@
     </div>
   </div>
 
-  <!-- Indicator Tab -->
+
+  <!-- Campaign Info Tab -->
   <div id="dda-tab-2" class="l-2cr-fluid l-d-12"> 
+    <div class="grp-module">
+      <h2 class="clearfix">Campaign Information</h2>
+      <div class="grp-row" id="dda-campaign-container"></div>
+    </div>
+  </div>
+
+
+  <!-- Indicator Tab -->
+  <div id="dda-tab-3" class="l-2cr-fluid l-d-12"> 
     <div class="grp-module">
       <h2 class="clearfix">
 	Indicator Configuration
@@ -62,7 +73,7 @@
 
 
   <!-- Observable Pool Tab -->
-  <div id="dda-tab-3" class="l-2cr-fluid l-d-12"> 
+  <div id="dda-tab-4" class="l-2cr-fluid l-d-12"> 
     <div class="c-1">
       <div class="grp-module">
         <h2>Observable Templates</h2>
@@ -82,7 +93,7 @@
 
 
   <!-- Object Relations Tab -->
-  <div id="dda-tab-4" class="l-2cr-fluid l-d-12"> 
+  <div id="dda-tab-5" class="l-2cr-fluid l-d-12"> 
     <div class="c-1">
       <div class="grp-module">
         <h2>Relation Type</h2>
@@ -110,9 +121,19 @@
 
 <div id="dda-campaign-template-pool" style="display:none;"> 
  {% for campaignForm in campaignForms %}
- <div class="dda-campaign-template" id="dda-campaign-template_{{ campaignForm.campaign_type.value }}">
+ <div class="dda-campaign-template" id="dda-campaign-template_{{ campaignForm.object_type.value }}">
    <table>
      {{ campaignForm.as_table }} 
+   </table>
+ </div>
+ {% endfor %} 
+</div>
+
+<div id="dda-threatactor-template-pool" style="display:none;"> 
+ {% for threatActorForm in threatActorForms %}
+ <div class="dda-threatactor-template" id="dda-threatactor-template_{{ threatActorForm.object_type.value }}">
+   <table>
+     {{ threatActorForm.as_table }} 
    </table>
  </div>
  {% endfor %} 
@@ -131,7 +152,7 @@
 
 <div id="dda-indicator-template-pool" style="display:none;"> 
  {% for indicatorForm in indicatorForms %}
- <div class="dda-indicator-template"  id="dda-indicator-template_{{ indicatorForm.indicator_type.value }}">
+ <div class="dda-indicator-template"  id="dda-indicator-template_{{ indicatorForm.object_type.value }}">
    <table>
      {{ indicatorForm.as_table }} 
    </table>
