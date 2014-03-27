@@ -5,11 +5,15 @@ from django.http import HttpResponse, HttpResponseRedirect
 
 from dingos.models import InfoObject
 from django.db.models import Q
+
+from braces.views import LoginRequiredMixin
+
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME
 from dingos.view_classes import BasicListView
 from django.views.generic import View
 from transformer import stixTransformer
 
+from dingos_authoring.models import AuthoredData
 
 from libmantis import *
 from mantis_client import utils
@@ -79,7 +83,7 @@ def index(request):
 
 
 
-class transform(View):
+class transform(LoginRequiredMixin,View):
     def post(self, request, *args, **kwargs):
         res = {}
         POST = request.POST
@@ -87,8 +91,18 @@ class transform(View):
         if POST.has_key(u'j'):
             jsn = POST[u'j']
 
+
+            AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
+                                                 current_user=self.request.user,
+                                                 current_name='1111',
+                                                 status=AuthoredData.DRAFT,
+                                                 processor='test',
+                                                 display_view='test',
+                                                 data = jsn)
+
         t = stixTransformer(jsn)
         stix = t.getStix()
+
         if not stix:
             return HttpResponse('{}', content_type="application/json")
 
