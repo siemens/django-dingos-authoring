@@ -11,7 +11,7 @@ from django.contrib.auth.models import User, Group
 
 from braces.views import LoginRequiredMixin
 
-from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME
+from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
 from dingos.view_classes import BasicListView
 
 from models import GroupNamespaceMap
@@ -81,7 +81,7 @@ def index(request):
         {'label': 'Redirects_To', 'value': 'Redirects_To', 'description': 'Specifies that this object redirects to the related object.'}
     ]
 
-    return render_to_response('dingos_authoring/index.html',{
+    return render_to_response('dingos_authoring/%s/index.html' % DINGOS_TEMPLATE_FAMILY,{
         'title': 'Mantis Authoring',
         'observableForms': observableForms,
         'indicatorForms': indicatorForms,
