@@ -885,7 +885,7 @@ $(function() {
 		stix_base = instance.get_json();
 		$('#dda-gen-output').slideUp('fast',function(){		    
 		    var editor = ace.edit('dda-gen-output-content');
-		    $.post('transform', {'j':JSON.stringify(stix_base)}, function(data){
+		    $.post('transform', {'jsn':JSON.stringify(stix_base), 'submit_name' : guid_gen()}, function(data){
 			if(data.xml !== undefined){
 			    $('#dda-gen-output').slideDown('fast');
 			    editor.setOptions({
@@ -895,6 +895,11 @@ $(function() {
 			    editor.getSession().setMode("ace/mode/xml");
 			    editor.setValue(data.xml);
 			}
+            else if (data.error_msg !== undefined){
+                alert(data.error_msg);
+
+
+            }
 		    }, 'json');
 		});
 		return false;

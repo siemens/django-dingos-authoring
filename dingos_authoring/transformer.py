@@ -1,7 +1,7 @@
 #!/usr/bin/python2.7
 
 import sys, datetime 
-import json, whois, pytz
+import json, pytz
 import importlib, uuid
 
 from cybox.core import Observable, Observables
@@ -20,6 +20,7 @@ from stix.data_marking import Marking, MarkingSpecification
 from stix.bindings.extensions.marking.tlp import TLPMarkingStructureType
 import stix.utils
 
+from dingos import DINGOS_DEFAULT_ID_NAMESPACE_URI
 
 class stixTransformer:
     """
@@ -29,8 +30,8 @@ class stixTransformer:
     
     # Some defaults
     jsn = None
-    namespace_name = "cert.siemens.com"
-    namespace_prefix = "siemens_cert"
+    namespace_name = DINGOS_DEFAULT_ID_NAMESPACE_URI
+    namespace_prefix = "dingos_default"
     stix_header = {}
     stix_indicators = []
     campaign = None
@@ -40,9 +41,12 @@ class stixTransformer:
     old_observable_mapping = {}
     cybox_observable_list = None
 
-    def __init__(self, jsn):
-        # Set the namespace
-        # TODO: make adjustable (user dependend?)
+    def __init__(self, *args,**kwargs):
+        jsn = kwargs['jsn']
+        self.namespace_name = kwargs.get('namespace_uri',self.namespace_name)
+        self.namespace_prefix = kwargs.get('namespace_slug',self.namespace_prefix)
+
+
         self.namespace = cybox.utils.Namespace(self.namespace_name, self.namespace_prefix)
         cybox.utils.set_id_namespace(self.namespace)
         stix.utils.set_id_namespace({self.namespace_name: self.namespace_prefix})
@@ -314,5 +318,5 @@ if __name__ == '__main__':
         jsn = json.load(fp)
 
     if jsn:
-        t = stixTransformer(jsn)
+        t = stixTransformer(jsn=jsn)
         print t.run()

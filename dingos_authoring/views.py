@@ -1,19 +1,25 @@
-import json, collections
+import json, collections, logging, traceback
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseRedirect
 
 from dingos.models import InfoObject
 from django.db.models import Q
+from django.utils import timezone
+
+from django.contrib.auth.models import User, Group
 
 from braces.views import LoginRequiredMixin
 
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME
 from dingos.view_classes import BasicListView
+
+from models import GroupNamespaceMap
+
 from django.views.generic import View
 from transformer import stixTransformer
 
-from dingos_authoring.models import AuthoredData
+from dingos_authoring.models import AuthoredData, GroupNamespaceMap
 
 from libmantis import *
 from mantis_client import utils
@@ -22,7 +28,7 @@ import forms as observables
 from operator import itemgetter
 
 
-
+logger = logging.getLogger(__name__)
 
 def index(request):
 
@@ -91,27 +97,47 @@ def index(request):
 class transform(LoginRequiredMixin,View):
     def post(self, request, *args, **kwargs):
         res = {}
-        POST = request.POST
-        jsn = ''
-        if POST.has_key(u'j'):
-            jsn = POST[u'j']
+        if True: #try:
+            POST = request.POST
+            jsn = ''
+            if POST.has_key(u'jsn'):
+                jsn = POST[u'jsn']
+                submit_name = POST[u'submit_name']
+
+                namespace_infos = list(GroupNamespaceMap.objects.filter(group__in=self.request.user.groups.all())[:1])
+
+                if namespace_infos == []:
+                    raise Exception("User not allowed to author data.")
+                else:
+                    namespace_uri = namespace_infos[0].default_namespace.uri
+                    namespace_slug = namespace_infos[0].default_namespace.name
+                    if not namespace_slug:
+                        namespace_slug = 'dingos_author'
 
 
-            AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
-                                                 current_user=self.request.user,
-                                                 current_name='1111',
-                                                 status=AuthoredData.DRAFT,
-                                                 processor='test',
-                                                 display_view='test',
-                                                 data = jsn)
 
-        t = stixTransformer(jsn)
-        stix = t.getStix()
 
-        if not stix:
-            return HttpResponse('{}', content_type="application/json")
+                AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
+                                                     current_user=self.request.user,
+                                                     current_name= submit_name,
+                                                     current_timestamp='latest',
+                                                     status=AuthoredData.DRAFT,
+                                                     processor='test',
+                                                     display_view='test',
+                                                     data = jsn)
 
-        res['xml'] = stix
+                t = stixTransformer(jsn=jsn,namespace_uri=namespace_uri,namespace_slug=namespace_slug)
+                stix = t.getStix()
+
+                if not stix:
+                    return HttpResponse('{}', content_type="application/json")
+
+                res['xml'] = stix
+        #except Exception, e:
+        #    res['error_msg'] = "An error occured: %s" % e.message
+        #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (e.message,traceback.format_exc()))
+        #    raise e
+
         return HttpResponse(json.dumps(res), content_type="application/json")
 
 

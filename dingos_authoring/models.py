@@ -35,17 +35,27 @@ class Processor(models.Model):
                             unique=True
     )
 
+    def __unicode__(self):
+        return self.name
+
+
 class DisplayView(models.Model):
     name = models.CharField(max_length=255,
                             help_text="""View Identifier""",
                             unique=True
     )
 
+    def __unicode__(self):
+        return self.name
+
 class DataName(models.Model):
     name = models.CharField(max_length=255,
                             help_text="""Name/Identifier""",
                             unique=True
     )
+
+    def __unicode__(self):
+        return self.name
 
 
 class GroupNamespaceMap(models.Model):
@@ -108,7 +118,8 @@ class AuthoredData(models.Model):
     class Meta:
         unique_together = ("user",
                            "name",
-                           "kind")
+                           "kind",
+                           "timestamp")
 
 
     @staticmethod
@@ -150,8 +161,15 @@ class AuthoredData(models.Model):
     def object_update(current_kind,
                       current_user,
                       current_name,
+                      current_timestamp,
                       **kwargs
                       ):
+
+        print "Args %s %s %s %s %s" % (current_kind,current_user,current_name,current_timestamp,kwargs)
+
+        if isinstance(current_name,basestring):
+            current_name_obj, created = DataName.objects.get_or_create(name=current_name)
+
 
         if 'name' in kwargs:
             name_value = kwargs['name']
@@ -171,9 +189,33 @@ class AuthoredData(models.Model):
                 display_view_obj, created = DisplayView.objects.get_or_create(name=display_view_value)
                 kwargs['display_view'] = display_view_obj
 
+
+
+        print "All %s" % AuthoredData.objects.all()
+
         objs = AuthoredData.objects.filter(kind=current_kind,
                                            user=current_user,
-                                           name=current_name)
+                                           name=current_name_obj)
+        print "Existing %s" % objs
+        if current_timestamp == 'latest':
+            objs = list(objs.order_by('-timestamp')[:1])
+            print "Found %s" % objs
+            if len(objs) == 1:
+                # Below is an ugly hack, but in the limited application here it works.
+                objs[0].__dict__.update(kwargs)
+                objs[0].save()
+                return 1
+            else:
+                return 0
+
+        elif isinstance(current_timestamp,timezone):
+            objs.filter(timestamp=current_timestamp)
+        elif current_timestamp == 'all':
+            pass
+        else:
+            raise TypeError("Timestamp must be a timezone value, 'lastest', or 'all'.")
+
+        timestamp=current_timestamp
 
         return objs.update(**kwargs)
 
@@ -181,18 +223,31 @@ class AuthoredData(models.Model):
     def object_update_or_create(current_kind,
                                 current_user,
                                 current_name,
+                                current_timestamp,
                                 **kwargs):
+
+        if current_timestamp == 'all':
+            raise TypeError("This method cannot be called with timestamp = 'all'.")
+
         updated_objs = AuthoredData.object_update(current_kind,
                                                   current_user,
                                                   current_name,
+                                                  current_timestamp,
                                                   **kwargs)
         if updated_objs == 0:
+            # no object was found, so we create one.
+
             if not 'name' in kwargs:
                 kwargs['name'] = current_name
             if not 'kind' in kwargs:
                 kwargs['kind'] = current_kind
             if not 'user' in kwargs:
                 kwargs['user'] = current_user
+            if not 'timestamp' in kwargs:
+                if current_timestamp == 'latest':
+                    kwargs['timestamp'] = timezone.now()
+                else:
+                    kwargs['timestamp'] = current_timestamp
 
             AuthoredData.object_create(**kwargs)
 
