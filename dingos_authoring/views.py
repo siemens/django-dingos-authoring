@@ -7,22 +7,32 @@ from dingos.models import InfoObject
 from django.db.models import Q
 from django.utils import timezone
 
+from django.contrib import messages
+
 from django.contrib.auth.models import User, Group
 
-from braces.views import LoginRequiredMixin
+from braces.views import LoginRequiredMixin, SuperuserRequiredMixin
 
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
-from dingos.view_classes import BasicListView
+from dingos.view_classes import BasicListView, BasicTemplateView
+
+from dingos.importer import Generic_XML_Import
 
 from models import GroupNamespaceMap
 
 from django.views.generic import View
 from transformer import stixTransformer
 
-from dingos_authoring.models import AuthoredData, GroupNamespaceMap
+from .models import AuthoredData, GroupNamespaceMap
 
-from libmantis import *
-from mantis_client import utils
+import libxml2
+
+from . import DINGOS_AUTHORING_IMPORTER_REGISTRY
+
+#from libmantis import *
+#from mantis_client import utils
+
+from forms import XMLImportForm
 
 import forms as observables
 from operator import itemgetter
@@ -188,5 +198,62 @@ class ref(BasicListView):
                             content_type='application/json',
                             **httpresponse_kwargs)
 
+
+
+
+class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):
+    """
+    View for importing XML.
+    """
+
+    template_name = 'dingos_authoring/%s/XMLImport.html' % DINGOS_TEMPLATE_FAMILY
+    title = 'Import XML'
+
+    def get_context_data(self, **kwargs):
+        context = super(XMLImportView, self).get_context_data(**kwargs)
+        context['form'] = self.form
+        return context
+
+    def get(self, request, *args, **kwargs):
+        self.form = XMLImportForm()
+        return super(BasicTemplateView,self).get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.form = XMLImportForm(request.POST.dict())
+
+        if self.form.is_valid():
+            data = self.form.cleaned_data
+            doc = libxml2.parseDoc(data['xml'])
+            root = doc.getRootElement()
+
+            ns_mapping = {}
+            ns_def = root.nsDefs()
+            while ns_def:
+                ns_mapping[ns_def.name] = ns_def.content
+                ns_def = ns_def.next
+
+            try:
+                ns_slug = root.ns().name
+            except:
+                ns_slug = None
+
+            if ns_slug:
+                namespace = ns_mapping.get(ns_slug,None)
+            else:
+                namespace = None
+
+            importer_class = Generic_XML_Import
+            for (matcher,mapped_importer_class) in DINGOS_AUTHORING_IMPORTER_REGISTRY:
+                m = matcher.search(namespace)
+                if m:
+                    importer_class = mapped_importer_class
+                    break
+            importer = importer_class()
+            result = importer.xml_import(xml_content = data['xml'])
+
+
+            messages.success(self.request,"Submitted %s" % (namespace))
+
+        return super(BasicTemplateView,self).get(request, *args, **kwargs)
 
 

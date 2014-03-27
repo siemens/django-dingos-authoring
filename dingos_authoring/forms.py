@@ -1,6 +1,9 @@
 from django import forms
 from django.templatetags.static import static
 
+from django.forms import widgets
+from validators import validate_xml
+
 """
 Classes describe front-end element. Element properties then show up in the resulting JSON as properties. 
 Properties with a leading 'I_' will not be converted to JSON
@@ -185,3 +188,12 @@ class CyboxURIOjbectForm(forms.Form):
     I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
     type_ = forms.ChoiceField(choices=URI_TYPES, required=False, initial="TYPE_URL")
     value = forms.CharField(max_length=2048, required=False)
+
+
+
+
+class XMLImportForm(forms.Form):
+    xml = forms.CharField(required=False,
+                            widget=widgets.Textarea(attrs={'cols':100,'rows':10,'style': 'height:auto; width:auto;'}),
+                            validators=[validate_xml])
+
