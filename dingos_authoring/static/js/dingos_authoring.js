@@ -59,6 +59,13 @@ $(function() {
 	});
     }
 
+    function querystring(key) {
+        var re=new RegExp('(?:\\?|&)'+key+'=(.*?)(?=&|$)','gi');
+        var r=[], m;
+        while ((m=re.exec(document.location.search)) != null) r.push(m[1]);
+        return r;
+    }
+
 
     $.fn.serializeObject = function(){
 	var o = {};
@@ -895,8 +902,8 @@ $(function() {
 			    editor.getSession().setMode("ace/mode/xml");
 			    editor.setValue(data.xml);
 			}
-            else if (data.error_msg !== undefined){
-                alert(data.error_msg);
+            else if (data.msg !== undefined){
+                alert(data.msg);
 
 
             }
@@ -904,7 +911,24 @@ $(function() {
 		});
 		return false;
 	    });
-	}
+        $('#dda-stix-save').off('click').on('click', function(){
+            stix_base = instance.get_json();
+            $('#dda-gen-output').slideUp('fast',function(){
+                var editor = ace.edit('dda-gen-output-content');
+                $.post('transform', {'jsn':JSON.stringify(stix_base), 'submit_name' : guid_gen(), 'action': 'save'}, function(data){
+
+                    if (data.msg !== undefined){
+                        alert(data.msg);
+
+
+                    }
+                }, 'json');
+            });
+            return false;
+        });
+
+
+    }
 	
 	// Campaign info tab
 	this.refresh_campaign_tab = function(){
@@ -1293,7 +1317,12 @@ $(function() {
 	};
 
 	// Return ourselfs
-	return instance;
+
+
+
+
+
+    return instance;
     };
     var b = builder();
 
@@ -1328,6 +1357,21 @@ $(function() {
 	
     });
 
+
+    if(querystring('load')!='')
+    {
+        $.get('load', {name : querystring('load')[0]}, function(data){
+            //if(data.jsn !== undefined){
+            //    b.load_from_json(data.jsn);
+            //    b.refresh_stix_package_tab();
+            //}
+            if (data.msg !== undefined){
+                alert(data.msg);
+            }
+
+
+        },'json');
+    }
 
 });
 

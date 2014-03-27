@@ -14,7 +14,7 @@ from django.contrib.auth.models import User, Group
 from braces.views import LoginRequiredMixin, SuperuserRequiredMixin
 
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
-from dingos.view_classes import BasicListView, BasicTemplateView
+from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView
 
 from dingos.importer import Generic_XML_Import
 
@@ -40,7 +40,11 @@ from operator import itemgetter
 
 logger = logging.getLogger(__name__)
 
-def index(request):
+
+class index(BasicListView):
+    pass
+
+def TemplateCampaignIndicators(request):
 
     observableForms = []
     indicatorForms = []
@@ -105,6 +109,10 @@ def index(request):
 
 
 class transform(LoginRequiredMixin,View):
+
+    processor = "http://stix.mitre.org/stix"
+    display_view = 'dingos_authoring.template.campaign_indicators'
+
     def post(self, request, *args, **kwargs):
         res = {}
         if True: #try:
@@ -113,8 +121,13 @@ class transform(LoginRequiredMixin,View):
             if POST.has_key(u'jsn'):
                 jsn = POST[u'jsn']
                 submit_name = POST[u'submit_name']
+                submit_action = POST.get(u'action','import')
+
+
 
                 namespace_infos = list(GroupNamespaceMap.objects.filter(group__in=self.request.user.groups.all())[:1])
+
+
 
                 if namespace_infos == []:
                     raise Exception("User not allowed to author data.")
@@ -144,7 +157,7 @@ class transform(LoginRequiredMixin,View):
 
                 res['xml'] = stix
         #except Exception, e:
-        #    res['error_msg'] = "An error occured: %s" % e.message
+        #    res['msg'] = "An error occured: %s" % e.message
         #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (e.message,traceback.format_exc()))
         #    raise e
 
@@ -200,6 +213,24 @@ class ref(BasicListView):
 
 
 
+class GetDraftJSON(BasicJSONView):
+    """
+    View for JSON representation of InfoObjects.
+    """
+    @property
+    def returned_obj(self):
+
+        name = self.request.GET.get('name',False)
+
+        json_obj_l = AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
+                                                 user=self.request.user,
+                                                 #name= name,
+                                                 status=AuthoredData.DRAFT).order_by('-timestamp')[:1]
+        json_obj = json_obj_l[0].data
+
+        print 'jsn %s' % json_obj
+        return {'msg':'Loaded',
+                'jsn':json_obj}
 
 class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):
     """
