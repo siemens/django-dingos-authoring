@@ -62,6 +62,7 @@ class DataName(models.Model):
         return self.name
 
 
+
 class GroupNamespaceMap(models.Model):
     """
 
@@ -75,6 +76,32 @@ class GroupNamespaceMap(models.Model):
 
     def __unicode__(self):
         return "%s: %s" % (self.group,self.default_namespace.uri)
+
+    @staticmethod
+    def get_authoring_namespace_info(user):
+
+        namespace_infos = GroupNamespaceMap.objects.filter(group__in=user.groups.all()).prefetch_related('default_namespace',
+                                                                                                                      'allowed_namespaces')
+        result = {}
+
+        for namespace_info in namespace_infos:
+            result[namespace_info.group.name] = {'default':namespace_info.default_namespace,
+                                                 'allowed':namespace_info.allowed_namespaces.all()}
+
+        return result
+
+
+
+
+        if namespace_infos == []:
+            raise Exception("User not allowed to author data.")
+        else:
+            namespace_uri = namespace_infos[0].default_namespace.uri
+            namespace_slug = namespace_infos[0].default_namespace.name
+            if not namespace_slug:
+                namespace_slug = 'dingos_author'
+
+
 
 class AuthoredData(models.Model):
     """

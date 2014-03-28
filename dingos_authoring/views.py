@@ -1,3 +1,20 @@
+# Copyright (c) Siemens AG, 2014
+#
+# This file is part of MANTIS.  MANTIS is free software: you can
+# redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation; either version 2
+# of the License, or(at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc., 51
+# Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
 import json, collections, logging, traceback
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -13,10 +30,13 @@ from django.contrib.auth.models import User, Group
 
 from braces.views import LoginRequiredMixin, SuperuserRequiredMixin
 
+from dingos.core.utilities import lookup_in_re_list
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
 from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView
 
 from dingos.importer import Generic_XML_Import
+
+
 
 from models import GroupNamespaceMap
 
@@ -24,6 +44,8 @@ from django.views.generic import View
 from transformer import stixTransformer
 
 from .models import AuthoredData, GroupNamespaceMap
+
+from .view_classes import AuthoringMethodMixin
 
 import libxml2
 
@@ -108,7 +130,7 @@ def TemplateCampaignIndicators(request):
 
 
 
-class transform(LoginRequiredMixin,View):
+class transform(LoginRequiredMixin,AuthoringMethodMixin,View):
 
     processor = "http://stix.mitre.org/stix"
     display_view = 'dingos_authoring.template.campaign_indicators'
@@ -122,21 +144,10 @@ class transform(LoginRequiredMixin,View):
                 jsn = POST[u'jsn']
                 submit_name = POST[u'submit_name']
                 submit_action = POST.get(u'action','import')
-
-
-
-                namespace_infos = list(GroupNamespaceMap.objects.filter(group__in=self.request.user.groups.all())[:1])
-
-
-
-                if namespace_infos == []:
-                    raise Exception("User not allowed to author data.")
-                else:
-                    namespace_uri = namespace_infos[0].default_namespace.uri
-                    namespace_slug = namespace_infos[0].default_namespace.name
-                    if not namespace_slug:
-                        namespace_slug = 'dingos_author'
-
+                try:
+                    namespace_info = self.get_authoring_namespaces()
+                except StandardError, e:
+                    return HttpResponse(json.dumps({'msg':e.message}), content_type="application/json")
 
 
 
@@ -149,7 +160,9 @@ class transform(LoginRequiredMixin,View):
                                                      display_view='test',
                                                      data = jsn)
 
-                t = stixTransformer(jsn=jsn,namespace_uri=namespace_uri,namespace_slug=namespace_slug)
+                t = stixTransformer(jsn=jsn,
+                                    namespace_uri=namespace_info['default_ns_uri'],
+                                    namespace_slug=namespace_info['default_ns_slug'],)
                 stix = t.getStix()
 
                 if not stix:
@@ -258,10 +271,15 @@ class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):
             root = doc.getRootElement()
 
             ns_mapping = {}
-            ns_def = root.nsDefs()
-            while ns_def:
-                ns_mapping[ns_def.name] = ns_def.content
-                ns_def = ns_def.next
+            try:
+                ns_def = root.nsDefs()
+
+                while ns_def:
+                    ns_mapping[ns_def.name] = ns_def.content
+                    ns_def = ns_def.next
+            except:
+                pass
+
 
             try:
                 ns_slug = root.ns().name
@@ -271,19 +289,18 @@ class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):
             if ns_slug:
                 namespace = ns_mapping.get(ns_slug,None)
             else:
-                namespace = None
+                namespace = ''
 
             importer_class = Generic_XML_Import
-            for (matcher,mapped_importer_class) in DINGOS_AUTHORING_IMPORTER_REGISTRY:
-                m = matcher.search(namespace)
-                if m:
-                    importer_class = mapped_importer_class
-                    break
-            importer = importer_class()
-            result = importer.xml_import(xml_content = data['xml'])
 
+            importer_class = lookup_in_re_list(DINGOS_AUTHORING_IMPORTER_REGISTRY,namespace)
 
-            messages.success(self.request,"Submitted %s" % (namespace))
+            if not importer_class:
+                messages.error(self.request,"Do not know how to import XML with namespace '%s'" % (namespace))
+            else:
+                importer = importer_class()
+                result = importer.xml_import(xml_content = data['xml'])
+                messages.success(self.request,"Submitted %s" % (namespace))
 
         return super(BasicTemplateView,self).get(request, *args, **kwargs)
 
