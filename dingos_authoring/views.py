@@ -28,11 +28,13 @@ from django.contrib import messages
 
 from django.contrib.auth.models import User, Group
 
+
+
 from braces.views import LoginRequiredMixin, SuperuserRequiredMixin
 
 from dingos.core.utilities import lookup_in_re_list
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
-from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView
+from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicFilterView
 
 from dingos.importer import Generic_XML_Import
 
@@ -64,8 +66,15 @@ logger = logging.getLogger(__name__)
 
 
 class index(BasicListView):
-    pass
 
+    title = "Saved Drafts"
+    template_name = 'dingos_authoring/%s/AuthoredObjectList.html' % DINGOS_TEMPLATE_FAMILY
+
+    @property
+    def queryset(self):
+        return AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
+                                           user=self.request.user,
+                                           status=AuthoredData.DRAFT).order_by('name').distinct('name')
 def TemplateCampaignIndicators(request):
 
     observableForms = []
@@ -157,7 +166,7 @@ class transform(LoginRequiredMixin,AuthoringMethodMixin,View):
                                                      current_timestamp='latest',
                                                      status=AuthoredData.DRAFT,
                                                      processor='test',
-                                                     display_view='test',
+                                                     display_view=self.display_view,
                                                      data = jsn)
 
                 t = stixTransformer(jsn=jsn,
