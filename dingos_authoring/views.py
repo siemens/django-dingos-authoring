@@ -66,7 +66,9 @@ logger = logging.getLogger(__name__)
 
 
 class index(BasicListView):
-
+    """
+    Overview of saved drafts.
+    """
     title = "Saved Drafts"
     template_name = 'dingos_authoring/%s/AuthoredObjectList.html' % DINGOS_TEMPLATE_FAMILY
 
@@ -76,7 +78,9 @@ class index(BasicListView):
                                            user=self.request.user,
                                            status=AuthoredData.DRAFT).order_by('name').distinct('name')
 def TemplateCampaignIndicators(request):
-
+    """
+    Edit view for STIX object describing indicators for a given campaign.
+    """
     observableForms = []
     indicatorForms = []
     campaignForms = []
@@ -237,7 +241,7 @@ class ref(BasicListView):
 
 class GetDraftJSON(BasicJSONView):
     """
-    View for JSON representation of InfoObjects.
+    View serving latest draft of given name
     """
     @property
     def returned_obj(self):
