@@ -15,8 +15,13 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+import json
 
-from .models import GroupNamespaceMap
+from dingos.view_classes import BasicView
+
+from .models import AuthoredData, GroupNamespaceMap
+
+from django.http import HttpResponse, HttpResponseRedirect
 
 class AuthoringMethodMixin(object):
     """
@@ -47,3 +52,50 @@ class AuthoringMethodMixin(object):
                     'allowed_ns_uris': allowed_namespace_uris}
         else:
             raise NotImplementedError("Functionality for several authoring groups not yet implemented")
+
+class BasicProcessingView(AuthoringMethodMixin,BasicView):
+
+    processor = None
+    display_view = None
+    transformer = None
+
+    def post(self, request, *args, **kwargs):
+        res = {}
+        if True: #try:
+            POST = request.POST
+            jsn = ''
+            if POST.has_key(u'jsn'):
+                jsn = POST[u'jsn']
+                submit_name = POST[u'submit_name']
+                submit_action = POST.get(u'action','import')
+                try:
+                    namespace_info = self.get_authoring_namespaces()
+                except StandardError, e:
+                    return HttpResponse(json.dumps({'msg':e.message}), content_type="application/json")
+
+
+
+                AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
+                                                     current_user=self.request.user,
+                                                     current_name= submit_name,
+                                                     current_timestamp='latest',
+                                                     status=AuthoredData.DRAFT,
+                                                     processor='test',
+                                                     display_view=self.display_view,
+                                                     data = jsn)
+
+                t = self.transformer(jsn=jsn,
+                                    namespace_uri=namespace_info['default_ns_uri'],
+                                    namespace_slug=namespace_info['default_ns_slug'],)
+                stix = t.getStix()
+
+                if not stix:
+                    return HttpResponse('{}', content_type="application/json")
+
+                res['xml'] = stix
+                #except Exception, e:
+            #    res['msg'] = "An error occured: %s" % e.message
+        #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (e.message,traceback.format_exc()))
+        #    raise e
+
+        return HttpResponse(json.dumps(res), content_type="application/json")

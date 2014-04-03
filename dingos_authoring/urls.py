@@ -23,13 +23,21 @@ from os import path
 
 from . import views
 
+from transformers.stix.CampaignIndicators import FormView as CampaingIndicatorsFormView
+from transformers.stix.CampaignIndicators import ProcessingView as CampaingIndicatorsProcessingView
+from transformers.stix.CampaignIndicators import FORM_VIEW_NAME as CampaingIndicatorsViewName
+
+
+
 urlpatterns = patterns('dingos_authoring.views',
                        url(r'^$', views.index.as_view(), name = "dingos_authoring.index"),
-                       url(r'^Templates/CampaignIndicators/$', views.TemplateCampaignIndicators, name="dingos_authoring.template.campaign_indicators"),
-                       url(r'^Templates/CampaignIndicators/transform$', views.transform.as_view(), name="dingos_authoring.template.campaign_indicators.transform"),
+
+                       url(r'^Templates/CampaignIndicators/$', CampaingIndicatorsFormView.as_view(), name=CampaingIndicatorsViewName),
+                       url(r'^Templates/CampaignIndicators/transform$', CampaingIndicatorsProcessingView.as_view()),
                        url(r'^Templates/CampaignIndicators/load$', views.GetDraftJSON.as_view(), name="dingos_authoring.load_json"),
 
                        url(r'^ref/$', views.ref.as_view(), name="dingos_authoring.ref"),
+
                        url(r'^XMLImport/$',
                            views.XMLImportView.as_view(),
                            name= "url.dingos_authoring.action.xml_import"),
