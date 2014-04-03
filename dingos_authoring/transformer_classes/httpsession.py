@@ -1,8 +1,21 @@
 from .__object_base__ import *
 
+from django import forms
 
-class transformer_class(transformer_object):
-    def process(self, properties):
+from django.templatetags.static import static
+
+class TEMPLATE_Default(transformer_object):
+    class ObjectForm(forms.Form):
+        object_type = forms.CharField(initial="HTTPSession", widget=forms.HiddenInput)
+        I_object_display_name = forms.CharField(initial="HTTP Session", widget=forms.HiddenInput)
+        I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+        method = forms.CharField(max_length=1024, required=False)
+        uri = forms.CharField(max_length=1024, required=False)
+        host = forms.CharField(max_length=1024, required=False)
+        port = forms.CharField(max_length=5, required=False)
+        user_agent = forms.CharField(max_length=1024, required=False)
+
+    def process_form(self, properties):
         cybox_http_session = http_session_object.HTTPSession()
         cybox_http_session.http_request_response = [self.__create_cybox_http_request_response(properties)]
         return cybox_http_session

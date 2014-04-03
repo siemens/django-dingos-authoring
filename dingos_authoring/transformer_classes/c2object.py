@@ -1,8 +1,18 @@
 from .__object_base__ import *
 
+from django import forms
 
-class transformer_class(transformer_object):
-    def process(self, properties):
+from django.templatetags.static import static
+
+class TEMPLATE_Default(transformer_object):
+    class ObjectForm(forms.Form):
+        object_type = forms.CharField(initial="C2Object", widget=forms.HiddenInput)
+        I_object_display_name = forms.CharField(initial="Command & Control Domains/IPs", widget=forms.HiddenInput)
+        I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+        _multi = forms.CharField(initial=static('true'), widget=forms.HiddenInput)
+        data = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Copy & Paste your Command and Control Domains/IPs here line by line.'}), required=False)
+
+    def process_form(self, properties):
         import socket
         
         return_objects = []

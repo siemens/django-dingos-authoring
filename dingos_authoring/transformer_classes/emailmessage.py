@@ -1,24 +1,15 @@
 from .__object_base__ import *
 
+from django import forms
 
-class transformer_class(transformer_object):
-    def process(self, properties):
-        cybox_email = email_message_object.EmailMessage()
-        if properties['raw_body']:
-            cybox_email.raw_body = String(properties['raw_body'])
-        if properties['raw_header']:
-            cybox_email.raw_header = String(properties['raw_header'])
-        cybox_email.header = self.__create_cybox_email_header_part(properties)
-        if len(properties['links'])>0:
-            url_list, domain_list = self.__create_cybox_email_links(properties['links'])
-            if url_list:
-                email_links = email_message_object.Links()
-                for url in url_list:
-                    links.append(email_message_object.LinkReference(url.parent.id_))
-                if links:
-                    cybox_email.links = links
-        return cybox_email
+from django.templatetags.static import static
 
+
+
+
+
+
+class Base(transformer_object):
     def __create_cybox_domain_object(self, domain, ip=None):
         new_domain_obj = {'URI': None, 'Whois': None, 'DNSQueryV4': None, 'DNSResultV4': None, 'ipv4': None, 'DNSQueryV6': None, 'DNSResultV6': None, 'ipv6': None}
         domain_name_obj = self.__create_domain_name_object(domain)
@@ -88,4 +79,69 @@ class transformer_class(transformer_object):
         return cybox_email_header
 
 
-        
+class TEMPLATE_Default(Base):
+    class ObjectForm(forms.Form):
+        object_type = forms.CharField(initial="EmailMessage", widget=forms.HiddenInput)
+        subtype = forms.CharField(initial="Default", widget=forms.HiddenInput)
+        I_object_display_name = forms.CharField(initial="Email Message (Default)", widget=forms.HiddenInput)
+        I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+        from_ = forms.CharField(max_length=256, required=False)
+        to = forms.CharField(widget=forms.Textarea(attrs={'placeholder':"Recipients line by line"}), required=False)
+        subject = forms.CharField(max_length=1024) # required to identify observable later in list
+        in_reply_to = forms.CharField(max_length=1024, required=False)
+        received_date = forms.CharField(required=False)
+        raw_header = forms.CharField(widget=forms.Textarea, required=False)
+        raw_body = forms.CharField(widget=forms.Textarea, required=False)
+        links = forms.CharField(widget=forms.Textarea(attrs={'placeholder':'Links line by line'}), required=False)
+
+
+    def process_form(self, properties):
+        cybox_email = email_message_object.EmailMessage()
+        if properties['raw_body']:
+            cybox_email.raw_body = String(properties['raw_body'])
+        if properties['raw_header']:
+            cybox_email.raw_header = String(properties['raw_header'])
+        cybox_email.header = self.__create_cybox_email_header_part(properties)
+        if len(properties['links'])>0:
+            url_list, domain_list = self.__create_cybox_email_links(properties['links'])
+            if url_list:
+                email_links = email_message_object.Links()
+                for url in url_list:
+                    links.append(email_message_object.LinkReference(url.parent.id_))
+                if links:
+                    cybox_email.links = links
+        return cybox_email
+
+
+class TEMPLATE_Test(Base):
+    class ObjectForm(forms.Form):
+        object_type = forms.CharField(initial="EmailMessage", widget=forms.HiddenInput)
+        subtype = forms.CharField(initial="Test", widget=forms.HiddenInput)
+        I_object_display_name = forms.CharField(initial="Email Message (blah)", widget=forms.HiddenInput)
+        I_icon =  forms.CharField(initial=static('img/stix/observable.svg'), widget=forms.HiddenInput)
+        from_ = forms.CharField(max_length=256, required=False)
+        to = forms.CharField(widget=forms.Textarea(attrs={'placeholder':"Recipients line by line"}), required=False)
+        subject = forms.CharField(max_length=1024) # required to identify observable later in list
+        in_reply_to = forms.CharField(max_length=1024, required=False)
+        received_date = forms.CharField(required=False)
+        raw_header = forms.CharField(widget=forms.Textarea, required=False)
+        raw_body = forms.CharField(widget=forms.Textarea, required=False)
+        links = forms.CharField(widget=forms.Textarea(attrs={'placeholder':'Links line by line'}), required=False)
+
+
+    def process_form(self, properties):
+        cybox_email = email_message_object.EmailMessage()
+        if properties['raw_body']:
+            cybox_email.raw_body = String(properties['raw_body'])
+        if properties['raw_header']:
+            cybox_email.raw_header = String(properties['raw_header'])
+        cybox_email.header = self.__create_cybox_email_header_part(properties)
+        if len(properties['links'])>0:
+            url_list, domain_list = self.__create_cybox_email_links(properties['links'])
+            if url_list:
+                email_links = email_message_object.Links()
+                for url in url_list:
+                    links.append(email_message_object.LinkReference(url.parent.id_))
+                if links:
+                    cybox_email.links = links
+        return cybox_email

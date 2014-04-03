@@ -20,7 +20,7 @@
 
 
 
-
+import re
 import sys, datetime 
 import json, pytz
 import importlib, uuid
@@ -170,13 +170,24 @@ class stixTransformer:
             
         for obs in observables:
             object_type = obs['observable_properties']['object_type']
-            try:
+            subtype = obs['observable_properties'].get('subtype','Default')
+
+            #m = re.match(r"(?P<object_type>[^(]+)( \((?P<subtype>[^)]+)\))?",object_type)
+
+            #if m:
+            #    type_dict = m.groupdict()
+            #    object_type = type_dict.get('object_type')
+            #    subtype = type_dict.get('subtype','Default')
+            #else:
+            #    raise StandardError("Cannot read object type")
+
+            if True: # try:
                 im = importlib.import_module('dingos_authoring.transformer_classes.' + object_type.lower())
-                cls = im.transformer_class()
-                cybox_obs = cls.process(obs['observable_properties'])
-            except Exception as e:
-                print 'Error in module %s:' % object_type.lower(), e
-                continue
+                template_obj = getattr(im,'TEMPLATE_%s' % subtype)()
+                cybox_obs = template_obj.process_form(obs['observable_properties'])
+            #except Exception as e:
+            #    print 'Error in module %s:' % object_type.lower(), e
+            #    continue
 
             if type(cybox_obs)==list: # We have multiple objects as result. We now need to create new ids and update the relations
                 old_id = obs['observable_id']

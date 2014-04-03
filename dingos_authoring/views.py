@@ -61,9 +61,39 @@ from forms import XMLImportForm
 import forms as observables
 from operator import itemgetter
 
+import sys
+
+import pkgutil
+
+import transformer_classes
 
 logger = logging.getLogger(__name__)
 
+print "Modules"
+
+
+
+
+
+
+TEMPLATE_REGISTRY = {}
+
+package = sys.modules['dingos_authoring.transformer_classes']
+
+
+prefix = package.__name__ + '.'
+for importer, modname, ispkg in pkgutil.iter_modules(package.__path__, prefix):
+
+    module = __import__(modname, fromlist="dummy")
+    print module.__name__
+    print dir(module)
+    for key in dir(module):
+        if 'TEMPLATE_' in key:
+            #if 'mantis_client' in modname:
+            #    modname = modname.split('mantis_client.')[1]
+            TEMPLATE_REGISTRY["%s.%s" % (modname,key.split("TEMPLATE_")[1])] = getattr(module,key)
+
+print TEMPLATE_REGISTRY
 
 class index(BasicListView):
     """
@@ -85,10 +115,15 @@ def TemplateCampaignIndicators(request):
     indicatorForms = []
     campaignForms = []
     threatActorForms = []
+
+    for template in TEMPLATE_REGISTRY.values():
+        observableForms.append(template.ObjectForm)
+
     for obj_elem in dir(observables):
         if obj_elem.startswith("Cybox"):
-            _cls = getattr(observables, obj_elem)
-            observableForms.append(_cls())
+            pass
+            #_cls = getattr(observables, obj_elem)
+            #observableForms.append(_cls())
         elif obj_elem.startswith("StixIndicator"):
             _cls = getattr(observables, obj_elem)
             indicatorForms.append(_cls())
