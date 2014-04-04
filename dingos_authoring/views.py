@@ -221,7 +221,8 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                 self.form = XMLImportForm()
 
 
-                messages.success(self.request,"Result %s" % result)
+                messages.success(self.request,"Imported objects: %s" % ", ".join(map(lambda x: "%s:%s" % (x['identifier_namespace_uri'], x['identifier_uid']), list(result))))
+
 
 
         return super(XMLImportView,self).get(request, *args, **kwargs)
