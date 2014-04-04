@@ -153,7 +153,7 @@ class GetDraftJSON(BasicJSONView):
         return {'msg':'Loaded',
                 'jsn':json_obj}
 
-class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):
+class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateView):
     """
     View for importing XML.
     """
@@ -198,6 +198,11 @@ class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):
                 namespace = ns_mapping.get(ns_slug,None)
             else:
                 namespace = ''
+            try:
+                namespace_info = self.get_authoring_namespaces()
+            except StandardError, e:
+                messages.error(self.request,e.message)
+                return super(XMLImportView,self).get(request, *args, **kwargs)
 
             importer_class = Generic_XML_Import
 
@@ -206,14 +211,19 @@ class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):
             if not importer_class:
                 messages.error(self.request,"Do not know how to import XML with namespace '%s'" % (namespace))
             else:
-                importer = importer_class()
+                importer = importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'],
+                                               default_identifier_ns_uri=namespace_info['default_ns_uri'],
+                                               substitute_unallowed_namespaces=True)
+
                 result = importer.xml_import(xml_content = data['xml'],
                                              track_created_objects=True)
+
+                self.form = XMLImportForm()
 
 
                 messages.success(self.request,"Result %s" % result)
 
 
-        return super(BasicTemplateView,self).get(request, *args, **kwargs)
+        return super(XMLImportView,self).get(request, *args, **kwargs)
 
 
