@@ -56,7 +56,7 @@ class AuthoringMethodMixin(object):
 
 class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
-    processor = None
+    importer_class = None
     author_view = None
     transformer = None
 
@@ -69,7 +69,8 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
             if POST.has_key(u'jsn'):
                 jsn = POST[u'jsn']
                 submit_name = POST[u'submit_name']
-                submit_action = POST.get(u'action','import')
+                submit_action = POST.get(u'action','generate')
+                print submit_action
                 try:
                     namespace_info = self.get_authoring_namespaces()
                 except StandardError, e:
@@ -89,20 +90,35 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                 if submit_action == 'save':
                     msg += "Draft saved.\n"
 
-
-                t = self.transformer(jsn=jsn,
-                                    namespace_uri=namespace_info['default_ns_uri'],
-                                    namespace_slug=namespace_info['default_ns_slug'],)
-                stix = t.getStix()
-
-
-
-                if not stix:
-                    msg += "STIX could not be created \n"
+                elif submit_action in ["generate", "import"]:
+                    t = self.transformer(jsn=jsn,
+                                         namespace_uri=namespace_info['default_ns_uri'],
+                                         namespace_slug=namespace_info['default_ns_slug'],)
+                    stix = t.getStix()
 
 
-                res['xml'] = stix
-                #except Exception, e:
+
+                    if not stix:
+                        msg += "STIX could not be created \n"
+                        res['xml'] = ""
+                    else:
+                        res['xml'] = stix
+
+                    if submit_action == 'import':
+
+                        self.importer_class.xml_import
+
+                        importer = self.importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'],
+                                                            default_identifier_ns_uri=namespace_info['default_ns_uri'],
+                                                            substitute_unallowed_namespaces=True)
+
+
+
+                        result = importer.xml_import(xml_content = res['xml'],track_created_objects=True)
+
+                        msg += ("Result %s" % result)
+
+                        #except Exception, e:
             #    res['msg'] = "An error occured: %s" % e.message
         #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (e.message,traceback.format_exc()))
         #    raise e

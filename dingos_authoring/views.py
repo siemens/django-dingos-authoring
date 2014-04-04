@@ -88,52 +88,6 @@ class index(BasicListView):
                                            status=AuthoredData.DRAFT).order_by('name').distinct('name')
 
 
-class transform(LoginRequiredMixin,AuthoringMethodMixin,View):
-
-    processor = "http://stix.mitre.org/stix"
-    display_view = 'dingos_authoring.template.campaign_indicators'
-
-    def post(self, request, *args, **kwargs):
-        res = {}
-        if True: #try:
-            POST = request.POST
-            jsn = ''
-            if POST.has_key(u'jsn'):
-                jsn = POST[u'jsn']
-                submit_name = POST[u'submit_name']
-                submit_action = POST.get(u'action','import')
-                try:
-                    namespace_info = self.get_authoring_namespaces()
-                except StandardError, e:
-                    return HttpResponse(json.dumps({'msg':e.message}), content_type="application/json")
-
-
-
-                AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
-                                                     current_user=self.request.user,
-                                                     current_name= submit_name,
-                                                     current_timestamp='latest',
-                                                     status=AuthoredData.DRAFT,
-                                                     processor='test',
-                                                     display_view=self.display_view,
-                                                     data = jsn)
-
-                t = stixTransformer(jsn=jsn,
-                                    namespace_uri=namespace_info['default_ns_uri'],
-                                    namespace_slug=namespace_info['default_ns_slug'],)
-                stix = t.getStix()
-
-                if not stix:
-                    return HttpResponse('{}', content_type="application/json")
-
-                res['xml'] = stix
-        #except Exception, e:
-        #    res['msg'] = "An error occured: %s" % e.message
-        #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (e.message,traceback.format_exc()))
-        #    raise e
-
-        return HttpResponse(json.dumps(res), content_type="application/json")
-
 
 class ref(BasicListView):
     def get_queryset(self):
@@ -253,8 +207,12 @@ class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):
                 messages.error(self.request,"Do not know how to import XML with namespace '%s'" % (namespace))
             else:
                 importer = importer_class()
-                result = importer.xml_import(xml_content = data['xml'])
-                messages.success(self.request,"Submitted %s" % (namespace))
+                result = importer.xml_import(xml_content = data['xml'],
+                                             track_created_objects=True)
+
+
+                messages.success(self.request,"Result %s" % result)
+
 
         return super(BasicTemplateView,self).get(request, *args, **kwargs)
 
