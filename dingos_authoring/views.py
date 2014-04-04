@@ -69,7 +69,6 @@ import pkgutil
 
 logger = logging.getLogger(__name__)
 
-print "Modules"
 
 
 
@@ -166,10 +165,6 @@ class ref(BasicListView):
 
     def render_to_response(self, context):
         #return self.get_json_response(json.dumps(context['object'].show_elements(""),indent=2))
-        for x in context['object_list']:
-            #print dir(x)
-            print 
-            pass
 
         res = {'success': True,
                'result': map(

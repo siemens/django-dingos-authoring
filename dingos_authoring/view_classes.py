@@ -47,7 +47,8 @@ class AuthoringMethodMixin(object):
                 namespace_slug = 'dingos_author'
 
             allowed_namespace_uris = map(lambda x: x.uri, namespace_info['allowed'])
-            return {'default_ns_uri': namespace_uri,
+            return {'authoring_group': namespace_info['authoring_group'],
+                    'default_ns_uri': namespace_uri,
                     'default_ns_slug': namespace_slug,
                     'allowed_ns_uris': allowed_namespace_uris}
         else:
@@ -56,11 +57,12 @@ class AuthoringMethodMixin(object):
 class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
     processor = None
-    display_view = None
+    author_view = None
     transformer = None
 
     def post(self, request, *args, **kwargs):
         res = {}
+        msg = ''
         if True: #try:
             POST = request.POST
             jsn = ''
@@ -77,20 +79,27 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
                 AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
                                                      current_user=self.request.user,
+                                                     current_group=namespace_info['authoring_group'],
                                                      current_name= submit_name,
                                                      current_timestamp='latest',
                                                      status=AuthoredData.DRAFT,
-                                                     processor='test',
-                                                     display_view=self.display_view,
+                                                     author_view=self.author_view,
                                                      data = jsn)
+
+                if submit_action == 'save':
+                    msg += "Draft saved.\n"
+
 
                 t = self.transformer(jsn=jsn,
                                     namespace_uri=namespace_info['default_ns_uri'],
                                     namespace_slug=namespace_info['default_ns_slug'],)
                 stix = t.getStix()
 
+
+
                 if not stix:
-                    return HttpResponse('{}', content_type="application/json")
+                    msg += "STIX could not be created \n"
+
 
                 res['xml'] = stix
                 #except Exception, e:
@@ -98,4 +107,6 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
         #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (e.message,traceback.format_exc()))
         #    raise e
 
+        if msg:
+            res['msg'] = msg
         return HttpResponse(json.dumps(res), content_type="application/json")

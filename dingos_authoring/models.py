@@ -33,17 +33,9 @@ from dingos.models import IdentifierNameSpace, InfoObject
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=2)
 
-class Processor(models.Model):
-    name = models.CharField(max_length=255,
-                            help_text="""Either transformer or importer""",
-                            unique=True
-    )
-
-    def __unicode__(self):
-        return self.name
 
 
-class DisplayView(models.Model):
+class AuthorView(models.Model):
     name = models.CharField(max_length=255,
                             help_text="""View Identifier""",
                             unique=True
@@ -85,7 +77,8 @@ class GroupNamespaceMap(models.Model):
         result = {}
 
         for namespace_info in namespace_infos:
-            result[namespace_info.group.name] = {'default':namespace_info.default_namespace,
+            result[namespace_info.group.name] = {'authoring_group' : namespace_info.group,
+                                                 'default':namespace_info.default_namespace,
                                                  'allowed':namespace_info.allowed_namespaces.all()}
 
         return result
@@ -132,9 +125,8 @@ class AuthoredData(models.Model):
                                     default=DRAFT,
                                     help_text="""Status""")
 
-    processor = models.ForeignKey("Processor")
 
-    display_view = models.ForeignKey("DisplayView",
+    author_view = models.ForeignKey("AuthorView",
                                      blank=True)
 
     name = models.ForeignKey(DataName)
@@ -143,11 +135,17 @@ class AuthoredData(models.Model):
 
     user = models.ForeignKey(User)
 
+    group = models.ForeignKey(Group)
+
     timestamp = models.DateTimeField()
 
 
+    def __unicode__(self):
+        return "%s (authored by user %s in group %s)" % (self.name,self.user, self.group)
+
     class Meta:
-        unique_together = ("user",
+        unique_together = ("group",
+                           "user",
                            "name",
                            "kind",
                            "timestamp")
@@ -156,10 +154,10 @@ class AuthoredData(models.Model):
     @staticmethod
     def object_create(kind=None,
                       status=None,
-                      processor=None,
-                      display_view='',
+                      author_view='',
                       data=None,
                       user=None,
+                      group=None,
                       name=None,
                       timestamp=timezone.now()):
 
@@ -168,22 +166,17 @@ class AuthoredData(models.Model):
         else:
             name_obj = name
 
-        if isinstance(processor,basestring):
-            processor_obj, created = Processor.objects.get_or_create(name=processor)
+        if isinstance(author_view,basestring):
+            author_view_obj, created = AuthorView.objects.get_or_create(name=author_view)
         else:
-            processor_obj = processor
-
-        if isinstance(display_view,basestring):
-            display_view_obj, created = DisplayView.objects.get_or_create(name=display_view)
-        else:
-            display_view_obj = display_view
+            author_view_obj = author_view
 
         return AuthoredData.objects.create(kind=kind,
                                            user=user,
+                                           group=group,
                                            name=name_obj,
                                            status=status,
-                                           processor=processor_obj,
-                                           display_view=display_view_obj,
+                                           author_view=author_view_obj,
                                            data=data,
                                            timestamp=timestamp)
 
@@ -191,12 +184,12 @@ class AuthoredData(models.Model):
     @staticmethod
     def object_update(current_kind,
                       current_user,
+                      current_group,
                       current_name,
                       current_timestamp,
                       **kwargs
                       ):
 
-        print "Args %s %s %s %s %s" % (current_kind,current_user,current_name,current_timestamp,kwargs)
 
         if isinstance(current_name,basestring):
             current_name_obj, created = DataName.objects.get_or_create(name=current_name)
@@ -208,26 +201,19 @@ class AuthoredData(models.Model):
                 name_obj, created = DataName.objects.get_or_create(name=name_value)
                 kwargs['name'] = name_obj
 
-        if 'processor' in kwargs:
-            processor_value = kwargs['processor']
-            if isinstance(processor_value,basestring):
-                processor_obj, created = Processor.objects.get_or_create(name=processor_value)
-                kwargs['processor'] = processor_obj
 
-        if 'display_view' in kwargs:
-            display_view_value = kwargs['display_view']
-            if isinstance(display_view_value,basestring):
-                display_view_obj, created = DisplayView.objects.get_or_create(name=display_view_value)
-                kwargs['display_view'] = display_view_obj
+        if 'author_view' in kwargs:
+            author_view_value = kwargs['author_view']
+            if isinstance(author_view_value,basestring):
+                author_view_obj, created = AuthorView.objects.get_or_create(name=author_view_value)
+                kwargs['author_view'] = author_view_obj
 
 
-
-        print "All %s" % AuthoredData.objects.all()
 
         objs = AuthoredData.objects.filter(kind=current_kind,
                                            user=current_user,
+                                           group=current_group,
                                            name=current_name_obj)
-        print "Existing %s" % objs
         if current_timestamp == 'latest':
             objs = list(objs.order_by('-timestamp')[:1])
             print "Found %s" % objs
@@ -253,6 +239,7 @@ class AuthoredData(models.Model):
     @staticmethod
     def object_update_or_create(current_kind,
                                 current_user,
+                                current_group,
                                 current_name,
                                 current_timestamp,
                                 **kwargs):
@@ -262,6 +249,7 @@ class AuthoredData(models.Model):
 
         updated_objs = AuthoredData.object_update(current_kind,
                                                   current_user,
+                                                  current_group,
                                                   current_name,
                                                   current_timestamp,
                                                   **kwargs)
@@ -274,6 +262,8 @@ class AuthoredData(models.Model):
                 kwargs['kind'] = current_kind
             if not 'user' in kwargs:
                 kwargs['user'] = current_user
+            if not 'group' in kwargs:
+                kwargs['group'] = current_group
             if not 'timestamp' in kwargs:
                 if current_timestamp == 'latest':
                     kwargs['timestamp'] = timezone.now()

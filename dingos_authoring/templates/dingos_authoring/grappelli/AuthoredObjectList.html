@@ -54,7 +54,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                     {% for obj in object_list %}
                         <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}">
                         <td>
-                            <a href="{%url obj.display_view.name %}?load={{ obj.name.name | urlencode }}">{{ obj.name }}</a>
+                            <a href="{%url obj.author_view.name %}?load={{ obj.name.name | urlencode }}">{{ obj.name }}</a>
                         </td>
                      </tr>
                     {% endfor %}
