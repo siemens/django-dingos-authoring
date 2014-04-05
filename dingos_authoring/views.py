@@ -199,7 +199,7 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
             else:
                 namespace = ''
             try:
-                namespace_info = self.get_authoring_namespaces()
+                namespace_info = self.get_authoring_namespaces(self.request.user)
             except StandardError, e:
                 messages.error(self.request,e.message)
                 return super(XMLImportView,self).get(request, *args, **kwargs)
