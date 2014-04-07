@@ -44,7 +44,7 @@ class AuthorView(models.Model):
     def __unicode__(self):
         return self.name
 
-class DataName(models.Model):
+class Identifier(models.Model):
     name = models.CharField(max_length=255,
                             help_text="""Name/Identifier""",
                             unique=True
@@ -129,7 +129,9 @@ class AuthoredData(models.Model):
     author_view = models.ForeignKey("AuthorView",
                                      blank=True)
 
-    name = models.ForeignKey(DataName)
+    identifier = models.ForeignKey(Identifier)
+
+    name = models.CharField(max_length=256)
 
     data = models.TextField(blank=True)
 
@@ -146,7 +148,7 @@ class AuthoredData(models.Model):
     class Meta:
         unique_together = ("group",
                            "user",
-                           "name",
+                           "identifier",
                            "kind",
                            "timestamp")
 
@@ -158,13 +160,14 @@ class AuthoredData(models.Model):
                       data=None,
                       user=None,
                       group=None,
+                      identifier=None,
                       name=None,
                       timestamp=timezone.now()):
 
-        if isinstance(name,basestring):
-            name_obj, created = DataName.objects.get_or_create(name=name)
+        if isinstance(identifier,basestring):
+            identifier_obj, created = Identifier.objects.get_or_create(name=identifier)
         else:
-            name_obj = name
+            identifier_obj = identifier
 
         if isinstance(author_view,basestring):
             author_view_obj, created = AuthorView.objects.get_or_create(name=author_view)
@@ -174,32 +177,33 @@ class AuthoredData(models.Model):
         return AuthoredData.objects.create(kind=kind,
                                            user=user,
                                            group=group,
-                                           name=name_obj,
+                                           identifier=identifier_obj,
                                            status=status,
                                            author_view=author_view_obj,
                                            data=data,
-                                           timestamp=timestamp)
+                                           timestamp=timestamp,
+                                           name=name)
 
 
     @staticmethod
     def object_update(current_kind,
                       current_user,
                       current_group,
-                      current_name,
+                      current_identifier,
                       current_timestamp,
                       **kwargs
                       ):
 
 
-        if isinstance(current_name,basestring):
-            current_name_obj, created = DataName.objects.get_or_create(name=current_name)
+        if isinstance(current_identifier,basestring):
+            current_identifier_obj, created = Identifier.objects.get_or_create(name=current_identifier)
 
 
-        if 'name' in kwargs:
-            name_value = kwargs['name']
-            if isinstance(name_value,basestring):
-                name_obj, created = DataName.objects.get_or_create(name=name_value)
-                kwargs['name'] = name_obj
+        if 'identifier' in kwargs:
+            identifier_value = kwargs['identifier']
+            if isinstance(identifier_value,basestring):
+                identifier_obj, created = Identifier.objects.get_or_create(name=identifier_value)
+                kwargs['identifier'] = identifier_obj
 
 
         if 'author_view' in kwargs:
@@ -213,7 +217,7 @@ class AuthoredData(models.Model):
         objs = AuthoredData.objects.filter(kind=current_kind,
                                            user=current_user,
                                            group=current_group,
-                                           name=current_name_obj)
+                                           identifier=current_identifier_obj)
         if current_timestamp == 'latest':
             objs = list(objs.order_by('-timestamp')[:1])
             print "Found %s" % objs
@@ -240,7 +244,7 @@ class AuthoredData(models.Model):
     def object_update_or_create(current_kind,
                                 current_user,
                                 current_group,
-                                current_name,
+                                current_identifier,
                                 current_timestamp,
                                 **kwargs):
 
@@ -250,14 +254,14 @@ class AuthoredData(models.Model):
         updated_objs = AuthoredData.object_update(current_kind,
                                                   current_user,
                                                   current_group,
-                                                  current_name,
+                                                  current_identifier,
                                                   current_timestamp,
                                                   **kwargs)
         if updated_objs == 0:
             # no object was found, so we create one.
 
-            if not 'name' in kwargs:
-                kwargs['name'] = current_name
+            if not 'identifier' in kwargs:
+                kwargs['identifier'] = current_identifier
             if not 'kind' in kwargs:
                 kwargs['kind'] = current_kind
             if not 'user' in kwargs:

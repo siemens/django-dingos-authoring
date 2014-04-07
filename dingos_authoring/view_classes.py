@@ -72,6 +72,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
             if POST.has_key(u'jsn'):
                 jsn = POST[u'jsn']
                 submit_name = POST[u'submit_name']
+                identifier = POST.get(u'id','TODO-test')
                 submit_action = POST.get(u'action','generate')
                 print submit_action
                 try:
@@ -85,9 +86,11 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                 AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
                                                      current_user=self.request.user,
                                                      current_group=namespace_info['authoring_group'],
-                                                     current_name= submit_name,
+                                                     current_identifier= identifier,
+
                                                      current_timestamp='latest',
                                                      status=AuthoredData.DRAFT,
+                                                     name=submit_name,
                                                      author_view=self.author_view,
                                                      data = jsn)
 
