@@ -149,8 +149,7 @@ class GetDraftJSON(BasicJSONView):
                                                  status=AuthoredData.DRAFT).order_by('-timestamp')[:1]
         json_obj = json_obj_l[0].data
 
-        print 'jsn %s' % json_obj
-        return {'msg':'Loaded',
+        return {'msg':'Loaded template \''+ 'TODO'  +'\'',
                 'jsn':json_obj}
 
 class XMLImportView(SuperuserRequiredMixin,BasicTemplateView):

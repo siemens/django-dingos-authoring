@@ -61,8 +61,11 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
     transformer = None
 
     def post(self, request, *args, **kwargs):
-        res = {}
-        msg = ''
+        res = {
+            'status': False,
+            'msg': 'An error occured.'
+        }
+
         if True: #try:
             POST = request.POST
             jsn = ''
@@ -74,7 +77,8 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                 try:
                     namespace_info = self.get_authoring_namespaces()
                 except StandardError, e:
-                    return HttpResponse(json.dumps({'msg':e.message}), content_type="application/json")
+                    res['msg'] = e.message
+                    return HttpResponse(json.dumps(res), content_type="application/json")
 
 
 
@@ -88,7 +92,8 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                                      data = jsn)
 
                 if submit_action == 'save':
-                    msg += "Draft saved.\n"
+                    res['status'] = True
+                    res['msg'] = "Draft saved."
 
                 elif submit_action in ["generate", "import"]:
                     t = self.transformer(jsn=jsn,
@@ -96,16 +101,14 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                          namespace_slug=namespace_info['default_ns_slug'],)
                     stix = t.getStix()
 
-
-
                     if not stix:
-                        msg += "STIX could not be created \n"
-                        res['xml'] = ""
+                        res['msg'] = "STIX could not be created."
                     else:
+                        res['status'] = True
+                        res['msg'] = "STIX successfully generated."
                         res['xml'] = stix
 
                     if submit_action == 'import':
-
                         self.importer_class.xml_import
 
                         importer = self.importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'],
@@ -116,13 +119,12 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
                         result = importer.xml_import(xml_content = res['xml'],track_created_objects=True)
 
-                        msg += ("Result %s" % result)
+                        res['status'] = True
+                        res['msg'] = "Result %s" % result
 
                         #except Exception, e:
             #    res['msg'] = "An error occured: %s" % e.message
         #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (e.message,traceback.format_exc()))
         #    raise e
 
-        if msg:
-            res['msg'] = msg
         return HttpResponse(json.dumps(res), content_type="application/json")
