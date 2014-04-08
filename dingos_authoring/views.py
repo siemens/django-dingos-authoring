@@ -136,21 +136,45 @@ class ref(BasicListView):
 
 class GetDraftJSON(BasicJSONView):
     """
-    View serving latest draft of given name
+    View serving latest draft of given name, or respond with the list of available templates
     """
     @property
     def returned_obj(self):
+        res = {
+            'status': False,
+            'msg': 'An error occured loading the requested template',
+            'data': None
+        }
 
-        name = self.request.GET.get('name',False)
+        if 'list' in self.request.GET:
+            json_obj_l = AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
+                                                     user=self.request.user,
+                                                     status=AuthoredData.DRAFT).order_by('-timestamp')
+            res['status'] = True
+            res['msg'] = ''
+            res['data'] = []
+            for el in json_obj_l:
+                res['data'].append({'id': el.identifier.name, 'name': el.name})
 
-        json_obj_l = AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
-                                                 user=self.request.user,
-                                                 #name= name,
-                                                 status=AuthoredData.DRAFT).order_by('-timestamp')[:1]
-        json_obj = json_obj_l[0].data
+        else:
+            name = self.request.GET.get('name',False)
+            json_obj_l = AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
+                                                     user=self.request.user,
+                                                     identifier__name=name,
+                                                     status=AuthoredData.DRAFT).order_by('-timestamp')[:1]
 
-        return {'msg':'Loaded template \''+ 'TODO'  +'\'',
-                'jsn':json_obj}
+            try:
+                res['data'] = {}
+                res['data']['jsn'] = json_obj_l[0].data
+                res['data']['name'] = json_obj_l[0].name
+                res['data']['id'] = json_obj_l[0].identifier.name
+                res['status'] = True
+                res['msg'] = 'Loaded template \'' + json_obj_l[0].name + '\''
+            except:
+                pass
+
+        return res
+
 
 class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateView):
     """
