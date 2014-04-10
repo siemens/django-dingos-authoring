@@ -15,7 +15,7 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-import json, collections, logging, traceback
+import json, collections, logging, traceback, re
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseRedirect
@@ -50,6 +50,8 @@ from .models import AuthoredData, GroupNamespaceMap
 from .view_classes import AuthoringMethodMixin
 
 import libxml2
+from lxml import etree
+from base64 import b64encode
 
 from . import DINGOS_AUTHORING_IMPORTER_REGISTRY
 
@@ -60,6 +62,7 @@ from forms import XMLImportForm
 
 import forms as observables
 from operator import itemgetter
+import hashlib
 
 import sys
 
@@ -250,3 +253,148 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
         return super(XMLImportView,self).get(request, *args, **kwargs)
 
 
+
+
+class UploadFile(View):
+    """
+    Handles an uploaded file. Tries to detect the type according to the content and returns the appropriate object (e.g. file-observable)
+    """
+
+    def __identify_test_mechanism_file(self, file_content):
+        # Try IOC
+        try:
+            xroot = etree.fromstring(file_content)
+            # If the root looks like this, we are quite confident that this is a IOC file
+            if xroot.tag.lower() == '{http://schemas.mandiant.com/2010/ioc}ioc':
+                return 'ioc'
+        except:
+            pass
+
+        # Try YARA
+        reg = re.compile("^rule \w+$", re.IGNORECASE) # If a line starts with 'rule <some_name>', we think it's a yara file
+        if reg.match(file_content):
+            return 'yara'
+
+        # Try SNORT
+        reg = re.compile('^(alert|log|pass).*(->|<>|<-).*$', re.IGNORECASE)
+        for l in file_content.splitlines():
+            if reg.match(l):
+                return 'snort'
+
+        return None
+
+    def __identify_observable_file(self, file_content):
+        return None
+
+    def identify_uploaded_file(self, file_content): 
+        object_type = None
+        
+        # Test mechanisms type detection
+        object_type = self.__identify_test_mechanism_file(file_content)
+        if object_type is not None:
+            return object_type
+        
+        # Observable type detection
+        object_type = self.__identify_observable_file(file_content)
+        if object_type is not None:
+            return object_type
+
+        return object_type
+
+
+    def post(self, request, *args, **kwargs):
+        res = {
+            'status': False,
+            'msg': 'An error occured.',
+            'data': {}
+        }
+        FILES = request.FILES
+        f = False
+        if FILES.has_key(u'file'):
+            f = FILES['file']
+            file_content = f.read()
+
+            ftype = self.identify_uploaded_file(file_content)
+            ftype_ok = True
+            # GUI passed allowed file types
+            req_type = request.POST.get('dda_dropzone_type_allow', None)
+            if req_type:
+                req_type = req_type.split(',')
+                if not (len(req_type)==1 and req_type[0]==''): # allowed not types empty
+                    if not ftype in req_type: # if type not in specified types
+                        ftype_ok = False
+                        res['msg'] = 'The uploaded file could not be identified.'
+                
+            
+
+            if ftype=='ioc' and ftype_ok:
+                try:
+                    xroot = etree.fromstring(file_content)
+                    #xroot_string = etree.tostring(xroot, encoding='UTF-8', xml_declaration=False)
+
+                    predef_id = xroot.get('id', None)
+                    if predef_id:
+                        predef_id = 'siemens_cert:Test_Mechanism-' + predef_id
+
+                    res['status'] = True
+                    res['msg'] = ''
+                    res['data'] = [{ 'object_class': 'testmechanism',
+                                     'object_type': 'Test_Mechanism',
+                                     'object_subtype': 'IOC',
+                                     'object_id': predef_id,
+                                     'properties': { 'ioc_xml': b64encode(file_content),
+                                                     'ioc_title': f.name,
+                                                     'ioc_description': ''
+                                                 }
+                             }]
+                except Exception as e:
+                    res['msg'] =  str(e)
+                    pass
+            elif ftype=='snort' and ftype_ok:
+                res['status'] = True
+                res['msg'] = ''
+                res['data'] = [{ 'object_class': 'testmechanism',
+                                 'object_type': 'Test_Mechanism',
+                                 'object_subtype': 'SNORT',
+                                 'object_id': False,
+                                 'properties': { 'snort_rules': b64encode(file_content),
+                                                 'snort_title': f.name,
+                                                 'snort_description': ''
+                                             }
+                             }]
+
+            elif ftype_ok:
+                res['status'] = True
+                res['msg'] = ''
+
+
+                md5 = hashlib.md5()
+                md5.update(file_content)
+
+                sha1 = hashlib.sha1()
+                sha1.update(file_content)
+
+                sha256 = hashlib.sha256()
+                sha256.update(file_content)
+
+                res['data'] = [{ 'object_class': 'observable',
+                                 'object_type': 'File',
+                                 'object_subtype': 'Default',
+                                 'properties': { 'file_name': f.name,
+                                                 'file_path': '',
+                                                 'file_size': f.size,
+                                                 'md5': md5.hexdigest(),
+                                                 'sha1': sha1.hexdigest(),
+                                                 'sha256': sha256.hexdigest()
+                                             }
+                             }]
+
+
+        if not request.META.has_key('HTTP_X_REQUESTED_WITH'): # Indicates fallback (form based upload)
+            ret  = '<script>'
+            ret += 'var r = ' + json.dumps(res) + ';';
+            ret += 'window.top._handle_file_upload_response(r);'
+            ret += '</script>'
+            return HttpResponse(ret)
+        else: #fancy upload
+            return HttpResponse(json.dumps(res), content_type="application/json")

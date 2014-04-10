@@ -74,7 +74,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                 submit_name = POST[u'submit_name']
                 identifier = POST.get(u'id','TODO-test')
                 submit_action = POST.get(u'action','generate')
-                print submit_action
+
                 try:
                     namespace_info = self.get_authoring_namespaces()
                 except StandardError, e:
@@ -82,19 +82,17 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                     return HttpResponse(json.dumps(res), content_type="application/json")
 
 
-
-                AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
-                                                     current_user=self.request.user,
-                                                     current_group=namespace_info['authoring_group'],
-                                                     current_identifier= identifier,
+                if submit_action == 'save':
+                    AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
+                                                         current_user=self.request.user,
+                                                         current_group=namespace_info['authoring_group'],
+                                                         current_identifier= identifier,
 
                                                      current_timestamp='latest',
-                                                     status=AuthoredData.DRAFT,
-                                                     name=submit_name,
-                                                     author_view=self.author_view,
-                                                     data = jsn)
-
-                if submit_action == 'save':
+                                                         status=AuthoredData.DRAFT,
+                                                         name=submit_name,
+                                                         author_view=self.author_view,
+                                                         data = jsn)
                     res['status'] = True
                     res['msg'] = "Draft saved."
 

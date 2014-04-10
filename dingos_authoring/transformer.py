@@ -170,20 +170,20 @@ class stixTransformer:
             
         for obs in observables:
             object_type = obs['observable_properties']['object_type']
-            subtype = obs['observable_properties'].get('subtype','Default')
+            object_subtype = obs['observable_properties'].get('object_subtype','Default')
 
-            #m = re.match(r"(?P<object_type>[^(]+)( \((?P<subtype>[^)]+)\))?",object_type)
+            #m = re.match(r"(?P<object_type>[^(]+)( \((?P<object_subtype>[^)]+)\))?",object_type)
 
             #if m:
             #    type_dict = m.groupdict()
             #    object_type = type_dict.get('object_type')
-            #    subtype = type_dict.get('subtype','Default')
+            #    object_subtype = type_dict.get('object_subtype','Default')
             #else:
             #    raise StandardError("Cannot read object type")
 
             if True: # try:
                 im = importlib.import_module('dingos_authoring.transformer_classes.' + object_type.lower())
-                template_obj = getattr(im,'TEMPLATE_%s' % subtype)()
+                template_obj = getattr(im,'TEMPLATE_%s' % object_subtype)()
                 cybox_obs = template_obj.process_form(obs['observable_properties'])
             #except Exception as e:
             #    print 'Error in module %s:' % object_type.lower(), e
