@@ -21,6 +21,8 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 {% load dingos_tags %}
 
+{%  load dingos_authoring_tags %}
+
 {% block extrahead %}
 
 {% endblock %}
@@ -28,6 +30,10 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 {% block tool_title %} {%  endblock %}
 {% block list-tools %} {% endblock %}
 {% block list_title %}Saved Drafts {% endblock %}
+
+{% block right_column %}
+{% show_AuthoringNamespaces %}
+{% endblock %}
 
 {% block objects %}
 

@@ -26,6 +26,7 @@ from django.contrib.auth.models import User, Group
 
 from dingos.models import IdentifierNameSpace, InfoObject
 
+import dingos_authoring.read_settings
 
 
 

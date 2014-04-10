@@ -28,14 +28,21 @@ class AuthoringMethodMixin(object):
     We use this Mixin to enrich view with methods that are required
     by several authoring views.
     """
-    def get_authoring_namespaces(self,force_single_group=True):
+    @staticmethod
+    def get_authoring_namespaces(user,force_single_group=True,fail_silently=False):
 
-        namespace_infos = GroupNamespaceMap.get_authoring_namespace_info(self.request.user)
+        namespace_infos = GroupNamespaceMap.get_authoring_namespace_info(user)
 
         if len(namespace_infos.keys()) == 0:
-            raise StandardError("User not allowed to author data.")
+            if fail_silently:
+                return None
+            else:
+                raise StandardError("User not allowed to author data.")
         elif len(namespace_infos.keys()) > 1 and force_single_group:
-            raise StandardError("Current user is member of more than one authoring groups")
+            if fail_silently:
+                return None
+            else:
+                raise StandardError("Current user is member of more than one authoring groups")
         elif force_single_group:
             namespace_info = namespace_infos.values()[0]
             default_namespace = namespace_info['default']
@@ -76,7 +83,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                 submit_action = POST.get(u'action','generate')
 
                 try:
-                    namespace_info = self.get_authoring_namespaces()
+                    namespace_info = self.get_authoring_namespaces(self.request.user)
                 except StandardError, e:
                     res['msg'] = e.message
                     return HttpResponse(json.dumps(res), content_type="application/json")

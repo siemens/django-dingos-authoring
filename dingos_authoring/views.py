@@ -72,8 +72,13 @@ import pkgutil
 
 logger = logging.getLogger(__name__)
 
+import importlib
 
+AUTHORING_IMPORTER_REGISTRY = []
 
+for (matcher,module,class_name) in DINGOS_AUTHORING_IMPORTER_REGISTRY:
+    my_module = importlib.import_module(module)
+    AUTHORING_IMPORTER_REGISTRY.append((matcher,getattr(my_module,class_name)))
 
 
 
@@ -225,18 +230,21 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
             else:
                 namespace = ''
             try:
-                namespace_info = self.get_authoring_namespaces()
+                namespace_info = self.get_authoring_namespaces(self.request.user)
             except StandardError, e:
                 messages.error(self.request,e.message)
                 return super(XMLImportView,self).get(request, *args, **kwargs)
 
             importer_class = Generic_XML_Import
 
-            importer_class = lookup_in_re_list(DINGOS_AUTHORING_IMPORTER_REGISTRY,namespace)
+            importer_class = lookup_in_re_list(AUTHORING_IMPORTER_REGISTRY,namespace)
 
             if not importer_class:
                 messages.error(self.request,"Do not know how to import XML with namespace '%s'" % (namespace))
             else:
+
+
+
                 importer = importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'],
                                                default_identifier_ns_uri=namespace_info['default_ns_uri'],
                                                substitute_unallowed_namespaces=True)
@@ -247,7 +255,8 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                 self.form = XMLImportForm()
 
 
-                messages.success(self.request,"Result %s" % result)
+                messages.success(self.request,"Imported objects: %s" % ", ".join(map(lambda x: "%s:%s" % (x['identifier_namespace_uri'], x['identifier_uid']), list(result))))
+
 
 
         return super(XMLImportView,self).get(request, *args, **kwargs)
