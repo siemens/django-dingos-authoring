@@ -36,6 +36,7 @@ urlpatterns = patterns('dingos_authoring.views',
                        url(r'^Templates/CampaignIndicators/transform$', CampaingIndicatorsProcessingView.as_view()),
                        url(r'^Templates/CampaignIndicators/load$', views.GetDraftJSON.as_view(), name="dingos_authoring.load_json"),
                        url(r'^Templates/CampaignIndicators/upload$', dingos_authoring_views.UploadFile.as_view(), name="dingos_authoring.upload_file"),
+                       url(r'^Templates/CampaignIndicators/get_namespace$', dingos_authoring_views.GetAuthoringNamespace.as_view(), name="dingos_authoring.get_namespace"),
 
                        url(r'^ref/$', views.ref.as_view(), name="dingos_authoring.ref"),
 

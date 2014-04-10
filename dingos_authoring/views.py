@@ -407,3 +407,31 @@ class UploadFile(View):
             return HttpResponse(ret)
         else: #fancy upload
             return HttpResponse(json.dumps(res), content_type="application/json")
+
+
+
+class GetAuthoringNamespace(BasicJSONView, AuthoringMethodMixin):
+    """
+    View serving the namespace of the currently logged in user
+    """
+    @property
+    def returned_obj(self):
+        res = {
+            'status': False,
+            'msg': 'An error occured fetching your namespace information',
+            'data': None
+        }
+
+        if self.request.user:
+            try:
+                ns = self.get_authoring_namespaces(self.request.user)
+                del ns['authoring_group']
+                res['status'] = True
+                res['msg'] = ''
+                res['data'] = ns
+            except StandardError as e:
+                res['msg'] = str(e)
+            finally:
+                pass
+
+        return res
