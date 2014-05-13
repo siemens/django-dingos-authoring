@@ -1,3 +1,4 @@
 django>=1.5.1
 
 # Additional requirements go here
+querystring_parser>=1.2.0

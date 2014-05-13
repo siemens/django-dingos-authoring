@@ -20,7 +20,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseRedirect
 
-from dingos.models import InfoObject
+from dingos.models import InfoObject, InfoObject2Fact
 from django.db.models import Q
 from django.utils import timezone
 
@@ -37,13 +37,12 @@ from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
 from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicFilterView
 
 from dingos.importer import Generic_XML_Import
-
+from querystring_parser import parser
 
 
 from models import GroupNamespaceMap
 
 from django.views.generic import View
-from transformer import stixTransformer
 
 from .models import AuthoredData, GroupNamespaceMap
 
@@ -54,9 +53,6 @@ from lxml import etree
 from base64 import b64encode
 
 from . import DINGOS_AUTHORING_IMPORTER_REGISTRY
-
-#from libmantis import *
-#from mantis_client import utils
 
 from forms import XMLImportForm
 
@@ -97,48 +93,58 @@ class index(BasicListView):
 
 
 
-class ref(BasicListView):
-    def get_queryset(self):
-
-        if self.request.method == u'GET':
-            GET = self.request.GET
-            if GET.has_key(u'type') and GET.has_key(u'q'):
-                q = GET[u'q']
-                t = GET[u'type']
-
-                t_q = Q(iobject_type__name__icontains=t)
-                t_q = Q(iobject_type__name__icontains='file')
-                q_q = Q(identifier__uid__icontains=q) | Q(name__icontains=q)
-
-                #TODO: check t and q for validity
-                return InfoObject.objects.exclude(latest_of=None)\
-                               .exclude(iobject_family__name__exact=DINGOS_INTERNAL_IOBJECT_FAMILY_NAME)\
-                               .prefetch_related(
-                                   'iobject_type',
-                                   'iobject_family',
-                                   'iobject_family_revision',
-                                   'identifier')\
-                               .filter(q_q)\
-                               .filter(t_q)\
-                               .select_related().distinct().order_by('-latest_of__pk')[:10]
-
-        # Safetynet
-        return InfoObject.objects.none()
-
-    def render_to_response(self, context):
-        #return self.get_json_response(json.dumps(context['object'].show_elements(""),indent=2))
-
-        res = {'success': True,
-               'result': map(
-                   lambda x : {'id': x.identifier.uid, 'name': x.name, 'cat': str(x.iobject_type)},
-                   context['object_list'])
+class GetAuthoringObjectReference(BasicJSONView):
+    """
+    View serving a reference to an existing object
+    """
+    @property
+    def returned_obj(self):
+        res = {
+            'status': False,
+            'msg': 'An error occured',
+            'data': list(InfoObject.objects.none())
         }
-        return self.get_json_response(json.dumps(res))
 
-    def get_json_response(self, content, **httpresponse_kwargs):
-        return HttpResponse(content,
-                            content_type='application/json',
-                            **httpresponse_kwargs)
+        POST = self.request.POST
+        # TODO: POST contains the frontend object We now need to
+        # invoke some functionality depending on the object to
+        # generate lookahead elements
+        post_dict = parser.parse(POST.urlencode())
+
+        object_element = post_dict.get('el', {})
+        object_type = object_element.get('object_type', None).lower().strip()
+        object_subtype = object_element.get('object_subtype', 'Default')
+        queryterm = post_dict.get('q', '')
+
+        if not object_element or not object_type or object_type == '':
+            pass
+        elif object_type == 'campaign':
+            # TODO: fetch campaigns and associated threatactor from DB
+            #res['data'] = [{'id': 'ididididid', 'name': 'namenamenamename', 'cat': 'catcatcat', 'threatactor':{'id': 'taid', 'value': 'ta_label', 'label': 'ta_label'}}]
+            res['data'] = []
+
+        elif object_type == 'threatactor':
+            q_q = Q(name__icontains=queryterm) & Q(iobject_type__name__icontains="ThreatActor")
+            data =  InfoObject.objects.all(). \
+                    exclude(latest_of=None). \
+                    exclude(iobject_family__name__exact=DINGOS_INTERNAL_IOBJECT_FAMILY_NAME). \
+                    exclude(iobject_family__name__exact='ioc'). \
+                    filter(q_q). \
+                    distinct().order_by('name')[:10]
+            res['data'] = map(lambda x : {'id': x.identifier.uid, 'name': x.name, 'cat': str(x.iobject_type)}, data)
+
+        else:
+            try:
+                im = importlib.import_module('mantis_authoring.cybox_object_transformers.' + object_type)
+                template_obj = getattr(im,'TEMPLATE_%s' % object_subtype)()
+                data = template_obj.autocomplete(queryterm, object_element)
+                res['data'] = map(lambda x : {'id': x.iobject.identifier.uid, 'name': x.iobject.name, 'cat': str(x.iobject.iobject_type)}, data)
+                res['status'] = True
+                res['msg'] = ''
+            except Exception as e:
+                res['msg'] = str(e)
+                
+        return res
 
 
 
@@ -253,7 +259,6 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                                              track_created_objects=True)
 
                 self.form = XMLImportForm()
-
 
                 messages.success(self.request,"Imported objects: %s" % ", ".join(map(lambda x: "%s:%s" % (x['identifier_namespace_uri'], x['identifier_uid']), list(result))))
 
@@ -399,7 +404,7 @@ class UploadFile(View):
                              }]
 
 
-        if not request.META.has_key('HTTP_X_REQUESTED_WITH'): # Indicates fallback (form based upload)
+        if not request.is_ajax(): # Indicates fallback (form based upload)
             ret  = '<script>'
             ret += 'var r = ' + json.dumps(res) + ';';
             ret += 'window.top._handle_file_upload_response(r);'
@@ -435,3 +440,102 @@ class GetAuthoringNamespace(BasicJSONView, AuthoringMethodMixin):
                 pass
 
         return res
+
+
+
+# class ValidateObject(BasicJSONView, AuthoringMethodMixin):
+#     """
+#     Validates an object passed from the GUI. 
+#     """
+#     @property
+#     def returned_obj(self):
+#         res = {
+#             'status': False,
+#             'msg': 'An error occured validating the object.',
+#             'data': None
+#         }
+
+#         POST = self.request.POST
+#         post_dict = parser.parse(POST.urlencode())
+
+#         observable_properties = post_dict.get('observable_properties', {})
+#         object_type = observable_properties.get('object_type', None)
+#         object_subtype = observable_properties.get('object_subtype', 'Default')
+
+#         try:
+#             im = importlib.import_module('mantis_authoring.cybox_object_transformers.' + object_type.lower())
+#             template_obj = getattr(im,'TEMPLATE_%s' % object_subtype)()
+#             obs_form_valid = template_obj.validate_form(observable_properties)
+
+            
+
+
+#         except Exception as e:
+#             print e
+
+#         return res
+
+
+from django.views.generic.edit import FormView
+class ValidateObject(FormView):
+
+    def errors_to_json(self, errors):
+        """
+        Convert a Form error list to JSON::
+        """
+        return dict(
+                (k, map(unicode, v))
+                for (k,v) in errors.iteritems()
+            )
+
+    def get_form_kwargs(self, data=None):
+        kwargs = super(ValidateObject, self).get_form_kwargs()
+        if data:
+            kwargs.update({'initial': data, 'data': data})
+        return kwargs
+
+    def post(self, request, *args, **kwargs):
+
+        POST = self.request.POST
+        post_dict = parser.parse(POST.urlencode())
+        observable_properties = post_dict.get('observable_properties', {})
+        observable_properties['observable_id'] = post_dict.get('observable_id')
+        observable_properties['I_object_display_name'] = 'NONE'
+        observable_properties['I_icon'] = 'NONE'
+        object_type = observable_properties.get('object_type', None)
+        object_subtype = observable_properties.get('object_subtype', 'Default')
+
+        try:
+            im = importlib.import_module('mantis_authoring.cybox_object_transformers.' + object_type.lower())
+            template_obj = getattr(im,'TEMPLATE_%s' % object_subtype)()
+
+            form_class = template_obj.ObjectForm
+            form = form_class(**self.get_form_kwargs(observable_properties))
+        except:
+            res = {
+                'status': False,
+                'msg': 'An error occured validating the object.',
+                'data': None
+            }
+            return HttpResponse(json.dumps(res), content_type='application/json', )
+
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form, *args, **kwargs):
+        res = {
+            'status': True,
+            'msg': 'Validation successful',
+            'data': None
+        }
+        return HttpResponse(json.dumps(res), content_type='application/json', )
+
+    def form_invalid(self, form, *args, **kwargs):
+        res = {
+            'status': True,
+            'msg': 'An error occured validating the object.',
+            'data': self.errors_to_json(form.errors)
+        }
+        return HttpResponse(json.dumps(res), content_type='application/json', )
