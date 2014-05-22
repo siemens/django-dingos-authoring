@@ -16,6 +16,10 @@
 #
 
 import json, collections, logging, traceback, re
+
+from uuid import uuid4
+
+
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseRedirect
@@ -40,14 +44,14 @@ from dingos.importer import Generic_XML_Import
 from querystring_parser import parser
 
 
-from .models import GroupNamespaceMap
-from .tasks import add
-
+from .models import GroupNamespaceMap, AuthoredData, Identifier
+from .tasks import add, scheduled_import
+from .filter import ImportFilter
 
 
 from django.views.generic import View
 
-from .models import AuthoredData, GroupNamespaceMap
+
 
 from .view_classes import AuthoringMethodMixin
 
@@ -88,11 +92,33 @@ class index(BasicListView):
     title = "Saved Drafts"
     template_name = 'dingos_authoring/%s/AuthoredObjectList.html' % DINGOS_TEMPLATE_FAMILY
 
+
+
     @property
     def queryset(self):
         return AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
                                            user=self.request.user,
                                            status=AuthoredData.DRAFT).order_by('name').distinct('name')
+
+
+class ImportsView(BasicFilterView):
+    """
+    Overview of saved drafts.
+    """
+    title = "Imports"
+    template_name = 'dingos_authoring/%s/ImportList.html' % DINGOS_TEMPLATE_FAMILY
+
+
+    filterset_class= ImportFilter
+
+    title = 'Imports'
+
+
+    @property
+    def queryset(self):
+        return AuthoredData.objects.filter(
+                                           user=self.request.user,
+                                           status=AuthoredData.IMPORTED)
 
 
 
@@ -207,7 +233,7 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
         return context
 
     def get(self, request, *args, **kwargs):
-        self.form = XMLImportForm()
+        self.form = XMLImportForm({'name':'Import of XML via GUI'})
         return super(BasicTemplateView,self).get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -244,7 +270,7 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                 messages.error(self.request,e.message)
                 return super(XMLImportView,self).get(request, *args, **kwargs)
 
-            importer_class = Generic_XML_Import
+            importer_class = None
 
             importer_class = lookup_in_re_list(AUTHORING_IMPORTER_REGISTRY,namespace)
 
@@ -258,12 +284,30 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                                                default_identifier_ns_uri=namespace_info['default_ns_uri'],
                                                substitute_unallowed_namespaces=True)
 
-                result = importer.xml_import(xml_content = data['xml'],
-                                             track_created_objects=True)
+
+                if False: # Celery switched off
+                    result = importer.xml_import(xml_content = data['xml'],
+                                                 track_created_objects=True)
+                    messages.success(self.request,"Imported objects: %s" % ", ".join(map(lambda x: "%s:%s" % (x['identifier_namespace_uri'], x['identifier_uid']), list(result))))
+
+                else:
+                    result = scheduled_import.delay(importer,data['xml'])
+                    identifier = Identifier.objects.create(name="%s" % uuid4())
+                    authored_data = AuthoredData.objects.create(identifier = identifier,
+                                                                name = data.get('name',"Import of XML via GUI"),
+                                                                status = AuthoredData.IMPORTED,
+                                                                kind = AuthoredData.XML,
+                                                                data = data['xml'],
+                                                                user = self.request.user,
+                                                                group = namespace_info['authoring_group'],
+                                                                timestamp = timezone.now(),
+                                                                processing_id = result.id)
+
+                    messages.info(self.request,'Import started.')
 
                 self.form = XMLImportForm()
 
-                messages.success(self.request,"Imported objects: %s" % ", ".join(map(lambda x: "%s:%s" % (x['identifier_namespace_uri'], x['identifier_uid']), list(result))))
+
 
 
 

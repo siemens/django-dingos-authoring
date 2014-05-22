@@ -25,6 +25,10 @@ from validators import validate_xml
 
 
 class XMLImportForm(forms.Form):
+    name = forms.CharField(required=False,
+                           help_text="Name is displayed in list of imported XML; the name is not used in the import.",
+                           max_length=256,
+                           widget=widgets.TextInput(attrs={'size':'100','class':'vTextField'}))
     xml = forms.CharField(required=False,
                           widget=widgets.Textarea(attrs={'cols':100,'rows':10,'style': 'height:auto; width:100%;resize:vertical;min-height:150px;'}),
                           validators=[validate_xml])

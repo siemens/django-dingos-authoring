@@ -23,12 +23,8 @@ from os import path
 
 from . import views
 
-from transformers.stix.CampaignIndicators import FormView as CampaingIndicatorsFormView
-from transformers.stix.CampaignIndicators import ProcessingView as CampaingIndicatorsProcessingView
-from transformers.stix.CampaignIndicators import FORM_VIEW_NAME as CampaingIndicatorsViewName
-
-
 
 urlpatterns = patterns('dingos_authoring.views',
-                       url(r'^$', views.index.as_view(), name = "dingos_authoring.index")
+                       url(r'^$', views.index.as_view(), name = "dingos_authoring.index"),
+                       url(r'^Imports$', views.ImportsView.as_view(), name = "dingos_authoring.imports")
                        )

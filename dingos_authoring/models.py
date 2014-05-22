@@ -26,6 +26,8 @@ from django.contrib.auth.models import User, Group
 
 from dingos.models import IdentifierNameSpace, InfoObject
 
+from .tasks import scheduled_import
+
 import dingos_authoring.read_settings
 
 
@@ -128,9 +130,11 @@ class AuthoredData(models.Model):
 
 
     author_view = models.ForeignKey("AuthorView",
-                                     blank=True)
+                                     null=True)
 
     identifier = models.ForeignKey(Identifier)
+
+    processing_id = models.CharField(max_length=128,blank=True)
 
     name = models.CharField(max_length=256)
 
@@ -141,6 +145,36 @@ class AuthoredData(models.Model):
     group = models.ForeignKey(Group)
 
     timestamp = models.DateTimeField()
+
+    @property
+    def import_status(self):
+        if self.processing_id:
+            result = scheduled_import.AsyncResult(self.processing_id)
+            if result:
+                return result.status
+            else:
+                return 'n/a'
+
+    @property
+    def import_result(self):
+        if self.processing_id:
+            result = scheduled_import.AsyncResult(self.processing_id)
+            if result.status == 'SUCCESS':
+                try:
+                    list_of_objects = result.get(timeout=1)
+                    try:
+                        top_level_obj_dict = list_of_objects[-1]
+                        return top_level_obj_dict
+                    except Exception:
+                        return "Result of importer could not be interpreted."
+                except Exception, e:
+                    return "Import yielded exception %s" % e.message
+            else:
+                return None
+        else:
+            return None
+
+
 
 
     def __unicode__(self):
