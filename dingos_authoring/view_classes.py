@@ -23,6 +23,10 @@ from .models import AuthoredData, GroupNamespaceMap
 
 from django.http import HttpResponse, HttpResponseRedirect
 
+from django.utils import timezone
+
+from .tasks import scheduled_import
+
 class AuthoringMethodMixin(object):
     """
     We use this Mixin to enrich view with methods that are required
@@ -95,7 +99,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                                          current_group=namespace_info['authoring_group'],
                                                          current_identifier= identifier,
 
-                                                     current_timestamp='latest',
+                                                         current_timestamp='latest',
                                                          status=AuthoredData.DRAFT,
                                                          name=submit_name,
                                                          author_view=self.author_view,
@@ -124,11 +128,24 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                                             substitute_unallowed_namespaces=True)
 
 
+                        result = scheduled_import.delay(importer,res['xml'])
 
-                        result = importer.xml_import(xml_content = res['xml'],track_created_objects=True)
+                        AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
+                                                             current_user=self.request.user,
+                                                             current_group=namespace_info['authoring_group'],
+                                                             current_identifier= identifier,
+                                                             current_timestamp='latest',
+
+                                                             status=AuthoredData.IMPORTED,
+                                                             name=submit_name,
+                                                             author_view=self.author_view,
+                                                             data = jsn,
+                                                             processing_id = result.id)
+
+
 
                         res['status'] = True
-                        res['msg'] = "Result %s" % result
+                        res['msg'] = "Import started."
 
                         #except Exception, e:
             #    res['msg'] = "An error occured: %s" % e.message
