@@ -37,7 +37,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
       <div class="grp-module grp-changelist-results">
-        <table id="result_list" cellspacing="0" >
+        <table id="result_list" cellspacing="0" class="grp-sortable" >
 
                 {% block header_row %}
            	  <thead>
@@ -45,15 +45,14 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                     <th>
                         Import Status
                     </th>
-                    <th>
-                        Timestamp
+                    <th scope="col"  class="sortable column-identifier">
+                        {% render_table_ordering "timestamp" "Timestamp" %}
                     </th>
-                    <th>
-                        Kind
+                    <th scope="col"  class="sortable column-identifier">
+                        {% render_table_ordering "kind" "Kind" %}
                     </th>
-                    <th>
-                        Name
-                    </th>
+                    <th scope="col"  class="sortable column-identifier">
+                        {% render_table_ordering "name" "Name" %}
                     <th>
                         Top-level object
                     </th>
