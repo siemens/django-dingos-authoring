@@ -27,11 +27,11 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 {% endblock %}
 
-{% block tool_title %} {%  endblock %}
-{% block list-tools %} {% endblock %}
+
 {% block list_title %}Saved Drafts {% endblock %}
 
 {% block right_column %}
+{{ block.super  }}
 {% show_AuthoringNamespaces %}
 {% endblock %}
 
@@ -41,17 +41,26 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
       <div class="grp-module grp-changelist-results">
-        <table id="result_list" cellspacing="0" >
+        <table id="result_list" cellspacing="0" class="grp-sortable" >
 
                 {% block header_row %}
            	  <thead>
                     <tr>
-                    <th>
-                        Identifier
+                    <th scope="col"  class="sortable column-identifier">
+                        {% render_table_ordering "user" "Owner" %}
                     </th>
-                    <th>
-                        Name
+                    <th scope="col"  class="sortable column-identifier">
+                        {% render_table_ordering "name" "Name" %}
                     </th>
+                    <th scope="col"  class="sortable column-identifier">
+                        {% render_table_ordering "status" "Status" %}
+                    </th>
+                    <th scope="col"  class="sortable column-identifier">
+                        {% render_table_ordering "timestamp" "Timestamp" %}
+                    </th>
+
+                    <th></th>
+
 
                  </thead>
                 {% endblock %}
@@ -64,10 +73,20 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
                         <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}">
                             <td>
-                                <a href="{%url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }}">{{ obj.name }}</a>
+                                {{  obj.user }}
                             </td>
                             <td>
-                                <a href="{%url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }}">{{ obj.identifier }}</a>
+                                {{  obj.name }}
+                            </td>
+                            <td>
+                                {{  obj.get_status_display }}
+                            </td>
+                            <td>
+                                {{ obj.timestamp }}
+                            </td>
+
+                            <td>
+                                <a href="{%url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }}">EDIT</a>
                             </td>
                         </tr>
                     {% endfor %}

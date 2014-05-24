@@ -18,6 +18,23 @@ class ImportFilter(django_filters.FilterSet):
         model = AuthoredData
         fields = ['timestamp','name','kind']
 
+class AuthoringObjectFilter(django_filters.FilterSet):
+
+    name = django_filters.CharFilter(lookup_type='icontains',
+                                     label='Name contains')
+
+    timestamp = ExtendedDateRangeFilter(label="Import Timestamp")
+
+
+    status = django_filters.ChoiceFilter(choices=list(AuthoredData.STATUS) + [('','Any status')],required=False)
+
+    class Meta:
+        order_by = create_order_keyword_list(['user','timestamp','name','status'])
+        model = AuthoredData
+        fields = ['timestamp','name','status','user']
+
+
+
 
 
 

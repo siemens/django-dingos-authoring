@@ -46,7 +46,7 @@ from querystring_parser import parser
 
 from .models import GroupNamespaceMap, AuthoredData, Identifier
 from .tasks import add, scheduled_import
-from .filter import ImportFilter
+from .filter import ImportFilter, AuthoringObjectFilter
 
 
 from django.views.generic import View
@@ -71,6 +71,7 @@ import sys
 
 import pkgutil
 
+from django.db.models import Q
 
 
 logger = logging.getLogger(__name__)
@@ -85,20 +86,27 @@ for (matcher,module,class_name) in DINGOS_AUTHORING_IMPORTER_REGISTRY:
 
 
 
-class index(BasicListView):
+class index(AuthoringMethodMixin,BasicFilterView):
     """
     Overview of saved drafts.
     """
     title = "Saved Drafts"
     template_name = 'dingos_authoring/%s/AuthoredObjectList.html' % DINGOS_TEMPLATE_FAMILY
 
-
+    filterset_class = AuthoringObjectFilter
 
     @property
     def queryset(self):
-        return AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
-                                           user=self.request.user,
-                                           status=AuthoredData.DRAFT).order_by('name').distinct('name')
+        try:
+            namespace_info = self.get_authoring_namespaces(self.request.user)
+        except StandardError, e:
+            messages.error(self.request,e.message)
+            return AuthoredData.objects.exclude(id__contains='')
+
+
+        return AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,group=namespace_info['authoring_group'])
+                                           &
+                                           (Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED)))
 
 
 class ImportsView(BasicFilterView):
