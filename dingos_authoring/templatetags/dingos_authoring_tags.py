@@ -36,9 +36,9 @@ register = template.Library()
 
 @register.inclusion_tag('dingos_authoring/%s/includes/_AuthoringNamespacesDisplay.html'% DINGOS_TEMPLATE_FAMILY,takes_context=True)
 def show_AuthoringNamespaces(context):
-    namespace_info = AuthoringMethodMixin.get_authoring_namespaces(context['view'].request.user,
-                                                                   force_single_group=True,
-                                                                       fail_silently=True)
+    namespace_info = context['view'].namespace_info #AuthoringMethodMixin.get_authoring_namespaces(context['view'].request.user,
+                                                    #               force_single_group=True,
+                                                    #                   fail_silently=True)
 
     current_group = None
     allowed_uris = None

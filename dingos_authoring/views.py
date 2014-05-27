@@ -19,6 +19,7 @@ import json, collections, logging, traceback, re
 
 from uuid import uuid4
 
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -38,7 +39,9 @@ from braces.views import LoginRequiredMixin, SuperuserRequiredMixin
 
 from dingos.core.utilities import lookup_in_re_list
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
-from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicFilterView
+from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicFilterView, BasicListActionView
+
+
 
 from dingos.importer import Generic_XML_Import
 from querystring_parser import parser
@@ -85,18 +88,23 @@ for (matcher,module,class_name) in DINGOS_AUTHORING_IMPORTER_REGISTRY:
     AUTHORING_IMPORTER_REGISTRY.append((matcher,getattr(my_module,class_name)))
 
 
-
-class index(AuthoringMethodMixin,BasicFilterView):
+class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
     """
-    Overview of saved drafts.
+    Overview of history of an Authoring object.
     """
-    title = "Saved Drafts"
-    template_name = 'dingos_authoring/%s/AuthoredObjectList.html' % DINGOS_TEMPLATE_FAMILY
 
-    filterset_class = AuthoringObjectFilter
+    template_name = 'dingos_authoring/%s/AuthoredDataHistory.html' % DINGOS_TEMPLATE_FAMILY
+
+    @property
+    def title(self):
+        latest_auth_obj = AuthoredData.objects.get(group=self.namespace_info['authoring_group'],
+                                                      identifier__name=self.kwargs['id'],
+                                                      latest=True)
+        return "History of '%s' " % latest_auth_obj.name
 
     @property
     def queryset(self):
+
         try:
             namespace_info = self.get_authoring_namespaces(self.request.user)
         except StandardError, e:
@@ -104,9 +112,46 @@ class index(AuthoringMethodMixin,BasicFilterView):
             return AuthoredData.objects.exclude(id__contains='')
 
 
-        return AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,group=namespace_info['authoring_group'])
+        return AuthoredData.objects.filter(group=self.namespace_info['authoring_group'],
+                                                  identifier__name=self.kwargs['id']).order_by('-timestamp'). \
+            prefetch_related('identifier','group','user','author_view')
+
+class index(AuthoringMethodMixin,BasicFilterView):
+    """
+    Overview of saved drafts.
+    """
+
+    @property
+    def title(self):
+
+        if self.namespace_info:
+            return "Drafts and Imports of Authoring Group %s" % self.namespace_info['authoring_group']
+        else:
+            return "No drafts or imports to be shown (user not member of an authoring group)"
+
+    template_name = 'dingos_authoring/%s/AuthoredObjectList.html' % DINGOS_TEMPLATE_FAMILY
+
+    filterset_class = AuthoringObjectFilter
+
+
+    @property
+    def queryset(self):
+
+        try:
+            namespace_info = self.namespace_info
+        except StandardError, e:
+            messages.error(self.request,e.message)
+            return AuthoredData.objects.exclude(id__contains='')
+
+        return AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,group=namespace_info['authoring_group'],latest=True)
                                            &
-                                           (Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED)))
+                                           (Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))). \
+            prefetch_related('identifier','group','user','author_view')
+
+
+    list_actions = [('Take from owner', 'url.dingos_authoring.index.action.take', 0)]
+
+
 
 
 class ImportsView(BasicFilterView):
@@ -185,12 +230,13 @@ class GetAuthoringObjectReference(BasicJSONView):
 
 
 
-class GetDraftJSON(BasicJSONView):
+class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
     """
     View serving latest draft of given name, or respond with the list of available templates
     """
     @property
     def returned_obj(self):
+        authoring_group = self.namespace_info['authoring_group']
         res = {
             'status': False,
             'msg': 'An error occured loading the requested template',
@@ -200,7 +246,9 @@ class GetDraftJSON(BasicJSONView):
         if 'list' in self.request.GET:
             json_obj_l = AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
                                                      user=self.request.user,
-                                                     status=AuthoredData.DRAFT).order_by('-timestamp')
+                                                     group=authoring_group,
+                                                     status=AuthoredData.DRAFT,
+                                                     latest=True)
             res['status'] = True
             res['msg'] = ''
             res['data'] = []
@@ -209,20 +257,40 @@ class GetDraftJSON(BasicJSONView):
 
         else:
             name = self.request.GET.get('name',False)
-            json_obj_l = AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
-                                                     user=self.request.user,
-                                                     identifier__name=name,
-                                                     status=AuthoredData.DRAFT).order_by('-timestamp')[:1]
-
             try:
-                res['data'] = {}
-                res['data']['jsn'] = json_obj_l[0].data
-                res['data']['name'] = json_obj_l[0].name
-                res['data']['id'] = json_obj_l[0].identifier.name
-                res['status'] = True
-                res['msg'] = 'Loaded template \'' + json_obj_l[0].name + '\''
-            except:
-                pass
+                json_obj = AuthoredData.objects.get(Q(kind=AuthoredData.AUTHORING_JSON,
+                                                      group=authoring_group,
+                                                      identifier__name=name,
+                                                      latest=True,
+                                                      status=AuthoredData.DRAFT)
+                                                     &
+                                                     (Q(user__isnull=True) | Q(user=self.request.user))
+
+                                                      )
+            except ObjectDoesNotExist:
+                res['msg'] = 'Could not find object %s of group %s' %(name,authoring_group)
+                res['status'] = False
+            except MultipleObjectsReturned:
+                res['msg'] = """Something is wrong in the database: there are several "latest" objects
+                                of group %s with identifier %s""" % (authoring_group,name)
+
+            print "JSON obj %s with user %s" % (json_obj,json_obj.user)
+            if not json_obj.user:
+                # The user needs to take the object in order to edit it -- this is
+                # done automatically here.
+                json_obj = AuthoredData.object_copy(json_obj,user=self.request.user)
+                print "JSON obj %s with user %s" % (json_obj,json_obj.user)
+
+
+            res['data'] = {}
+            res['data']['jsn'] = json_obj.data
+            res['data']['name'] = json_obj.name
+            res['data']['id'] = json_obj.identifier.name
+            res['status'] = True
+            res['msg'] = 'Loaded template \'' + json_obj.name + '\''
+            #except:
+            #    res['status'] = False
+            #    res['msg'] = 'Something went wrong; could not load report.'
 
         return res
 
@@ -309,7 +377,8 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                                                                 user = self.request.user,
                                                                 group = namespace_info['authoring_group'],
                                                                 timestamp = timezone.now(),
-                                                                processing_id = result.id)
+                                                                processing_id = result.id,
+                                                                latest=True)
 
                     messages.info(self.request,'Import started.')
 
@@ -320,6 +389,64 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
 
 
         return super(XMLImportView,self).get(request, *args, **kwargs)
+
+
+
+
+
+class TakeReportView(AuthoringMethodMixin,BasicListActionView):
+
+
+    # The base query limits down the objects to the objects that
+    # the user is actually allowed to act upon. This is to prevent
+    # the user from fiddling with the data submitted by his browser
+    # and inserting identifiers of objects that were not offered
+    # by the view.
+
+    @property
+    def action_model_query(self):
+        base_query = AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,
+                                                   group=self.namespace_info['authoring_group'],
+                                                   latest=True) &
+                                                 Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))
+        return base_query
+
+
+
+
+    def _take_authoring_data_obj(self,form_data,authoring_data_obj):
+        if authoring_data_obj.user == self.request.user:
+            return (None,"'%s' is already owned by you." % authoring_data_obj.name)
+        elif authoring_data_obj.status == AuthoredData.DRAFT:
+            old_user = authoring_data_obj.user
+            obj = AuthoredData.object_copy(authoring_data_obj, user= self.request.user)
+
+            return (True, "'%s' is now owned by you instead of %s" % (obj.name, old_user))
+        elif authoring_data_obj.status == AuthoredData.IMPORTED:
+            obj= AuthoredData.object_copy(authoring_data_obj,
+                                         user= self.request.user,
+                                         status = AuthoredData.DRAFT)
+            return (True, "'%s' has been put into DRAFT mode and is now owned by you." % obj.name)
+        else:
+            return (False, "Do not know how to treat '%s'" % authoring_data_obj.name)
+
+
+
+    @property
+    def action_list(self):
+        return  [{'action_predicate': lambda x,y: True,
+                  'action_function': lambda x,y: self._take_authoring_data_obj(x,y)}]
+
+
+    title = 'Carry out actions on model instances'
+
+    description = """Provide here a brief description for the user of what to do -- this will be displayed
+                     in the view."""
+
+    template_name = 'dingos_authoring/%s/actions/TakeAuthoringDataObject.html' % DINGOS_TEMPLATE_FAMILY
+
+
+
 
 
 

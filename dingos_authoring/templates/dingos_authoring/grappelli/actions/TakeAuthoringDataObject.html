@@ -1,0 +1,69 @@
+{% extends "dingos/grappelli/actions/base_action_on_selected_list.html" %}
+
+{% comment %}
+Copyright (c) Siemens AG, 2014
+
+This file is part of MANTIS.  MANTIS is free software: you can
+redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation; either version 2
+of the License, or(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 51
+Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+{% endcomment %}
+
+
+
+
+
+{% block list_title %} Selected Objects {% endblock %}
+
+
+{% block action_description %}
+Take the selected reports.
+{% endblock %}
+
+
+            {% block action_form_fields %}
+            {% endblock %}
+
+
+
+{% block header_row %}
+    <thead>
+    <tr>
+        <th/>
+        <th>User</th>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Timestamp</th>
+    </tr>
+    </thead>
+
+{% endblock %}
+
+
+
+{% block instance_columns %}
+
+            <td> {% if obj.user %}
+                {{  obj.user }}
+            {% endif %}
+            </td>
+            <td>
+                {{  obj.name }}
+            </td>
+            <td>
+                {{  obj.get_status_display }}
+            </td>
+            <td>
+                {{ obj.timestamp }}
+            </td>
+
+{% endblock %}

@@ -23,6 +23,8 @@ from .models import AuthoredData, GroupNamespaceMap
 
 from django.http import HttpResponse, HttpResponseRedirect
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from django.utils import timezone
 
 from .tasks import scheduled_import
@@ -32,6 +34,8 @@ class AuthoringMethodMixin(object):
     We use this Mixin to enrich view with methods that are required
     by several authoring views.
     """
+
+
     @staticmethod
     def get_authoring_namespaces(user,force_single_group=True,fail_silently=False):
 
@@ -65,6 +69,20 @@ class AuthoringMethodMixin(object):
         else:
             raise NotImplementedError("Functionality for several authoring groups not yet implemented")
 
+
+    _namespace_info = None
+
+    @property
+    def namespace_info(self,reload=False):
+
+        if self._namespace_info and not reload:
+            return self._namespace_info
+        else:
+            print "Loading namesapce info"
+            self._namespace_info = self.get_authoring_namespaces(self.request.user,fail_silently=True)
+            return self._namespace_info
+
+
 class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
     importer_class = None
@@ -79,12 +97,17 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
         if True: #try:
             POST = request.POST
+            print "POST"
+            print POST
+            res['msg']=''
             jsn = ''
             if POST.has_key(u'jsn'):
                 jsn = POST[u'jsn']
                 submit_name = POST[u'submit_name']
                 identifier = POST.get(u'id','TODO-test')
                 submit_action = POST.get(u'action','generate')
+                print identifier
+                print submit_action
 
                 try:
                     namespace_info = self.get_authoring_namespaces(self.request.user)
@@ -93,31 +116,68 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                     return HttpResponse(json.dumps(res), content_type="application/json")
 
 
-                if submit_action == 'save':
-                    AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
-                                                         current_user=self.request.user,
-                                                         current_group=namespace_info['authoring_group'],
-                                                         current_identifier= identifier,
+                if submit_action in ['save','release','import']:
 
-                                                         current_timestamp='latest',
-                                                         status=AuthoredData.DRAFT,
-                                                         name=submit_name,
-                                                         author_view=self.author_view,
-                                                         data = jsn)
+                    try:
+                        previous_obj = AuthoredData.objects.get(identifier__name=identifier,
+                                                                group = namespace_info['authoring_group'],
+                                                                latest = True)
+                    except ObjectDoesNotExist:
+                        previous_obj = None
+
+
+
+                    if previous_obj and previous_obj.data == jsn:
+                        print previous_obj.data
+                        print jsn
+                        res['msg'] = "No changes to be saved. "
+                        previous_obj.timestamp = timezone.now()
+                        previous_obj.save()
+                    else:
+                        obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
+                                                   user=self.request.user,
+                                                   group=namespace_info['authoring_group'],
+                                                   identifier= identifier,
+                                                   timestamp=timezone.now(),
+                                                   status=AuthoredData.DRAFT,
+                                                   name=submit_name,
+                                                   author_view=self.author_view,
+                                                   data = jsn)
+
+                        res['msg'] = 'Changes saved. '
+                        print "Created obj %s with status %s, latest %s and timestamp %s" % (obj.identifier,obj.status,obj.latest,obj.timestamp)
+
+                    if submit_action == 'release':
+                        obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
+                                                   user=None,
+                                                   group=namespace_info['authoring_group'],
+                                                   identifier= identifier,
+                                                   timestamp=timezone.now(),
+                                                   status=AuthoredData.DRAFT,
+                                                   name=submit_name,
+                                                   author_view=self.author_view,
+                                                   data = jsn)
+                        res['msg'] += 'Report released. '
+
+
+                        print "Created obj %s with status %s, latest %s and timestamp %s" % (obj.identifier,obj.status,obj.latest,obj.timestamp)
+
                     res['status'] = True
-                    res['msg'] = "Draft saved."
 
-                elif submit_action in ["generate", "import"]:
+
+                if submit_action in ["generate", "import"]:
                     t = self.transformer(jsn=jsn,
                                          namespace_uri=namespace_info['default_ns_uri'],
                                          namespace_slug=namespace_info['default_ns_slug'],)
                     stix = t.getStix()
 
                     if not stix:
-                        res['msg'] = "STIX could not be created."
+                        res['msg'] += "STIX could not be created."
+                        res['status'] = False
+                        return res
                     else:
                         res['status'] = True
-                        res['msg'] = "STIX successfully generated."
+                        res['msg'] += "STIX successfully generated. "
                         res['xml'] = stix
 
                     if submit_action == 'import':
@@ -130,22 +190,23 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
                         result = scheduled_import.delay(importer,res['xml'])
 
-                        AuthoredData.object_update_or_create(current_kind=AuthoredData.AUTHORING_JSON,
-                                                             current_user=self.request.user,
-                                                             current_group=namespace_info['authoring_group'],
-                                                             current_identifier= identifier,
-                                                             current_timestamp='latest',
+                        print "Identifier is %s" % identifier
 
+                        obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
+                                                             user=None,
+                                                             group=namespace_info['authoring_group'],
+                                                             identifier= identifier,
+                                                             timestamp=timezone.now(),
                                                              status=AuthoredData.IMPORTED,
                                                              name=submit_name,
                                                              author_view=self.author_view,
                                                              data = jsn,
                                                              processing_id = result.id)
-
+                        print "Created obj %s with status %s, latest %s and timestamp %s" % (obj.identifier,obj.status,obj.latest,obj.timestamp)
 
 
                         res['status'] = True
-                        res['msg'] = "Import started."
+                        res['msg'] += "Import started and report released. "
 
                         #except Exception, e:
             #    res['msg'] = "An error occured: %s" % e.message
@@ -153,3 +214,6 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
         #    raise e
 
         return HttpResponse(json.dumps(res), content_type="application/json")
+
+
+

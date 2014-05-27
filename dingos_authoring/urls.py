@@ -26,5 +26,9 @@ from . import views
 
 urlpatterns = patterns('dingos_authoring.views',
                        url(r'^$', views.index.as_view(), name = "dingos_authoring.index"),
+                       url(r'^History$', views.index.as_view(), name = "dingos_authoring.index"),
+                       url(r'^History/(?P<pk>\d*)/$',
+                           views.index.as_view(),
+                           name = "dingos_authoring.view.authored_object.history"),
                        url(r'^Imports$', views.ImportsView.as_view(), name = "dingos_authoring.imports")
                        )

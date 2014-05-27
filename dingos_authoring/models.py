@@ -76,7 +76,8 @@ class GroupNamespaceMap(models.Model):
     def get_authoring_namespace_info(user):
 
         namespace_infos = GroupNamespaceMap.objects.filter(group__in=user.groups.all()).prefetch_related('default_namespace',
-                                                                                                                      'allowed_namespaces')
+                                                                                                         'allowed_namespaces',
+                                                                                                         'group')
         result = {}
 
         for namespace_info in namespace_infos:
@@ -85,17 +86,6 @@ class GroupNamespaceMap(models.Model):
                                                  'allowed':namespace_info.allowed_namespaces.all()}
 
         return result
-
-
-
-
-        if namespace_infos == []:
-            raise Exception("User not allowed to author data.")
-        else:
-            namespace_uri = namespace_infos[0].default_namespace.uri
-            namespace_slug = namespace_infos[0].default_namespace.name
-            if not namespace_slug:
-                namespace_slug = 'dingos_author'
 
 
 
@@ -118,16 +108,18 @@ class AuthoredData(models.Model):
     DRAFT = 0
     IMPORTED = 1
     TEMPLATE = 2
+    AUTOSAVE = 3
 
-    STATUS = ((DRAFT,"Draft"),
-              (IMPORTED,"Imported"),
-              (TEMPLATE,"Template"))
 
+    STATUS_WO_AUTOSAVE = ((DRAFT,"Draft"),
+                          (IMPORTED,"Imported"),
+                          (TEMPLATE,"Template"))
+
+    STATUS = tuple(list(STATUS_WO_AUTOSAVE) + [(AUTOSAVE,"Autsave")])
 
     status = models.SmallIntegerField(choices=STATUS,
                                     default=DRAFT,
                                     help_text="""Status""")
-
 
     author_view = models.ForeignKey("AuthorView",
                                      null=True)
@@ -140,11 +132,13 @@ class AuthoredData(models.Model):
 
     data = models.TextField(blank=True)
 
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User,null=True)
 
     group = models.ForeignKey(Group)
 
     timestamp = models.DateTimeField()
+
+    latest = models.BooleanField(default=False)
 
     @property
     def import_status(self):
@@ -175,8 +169,6 @@ class AuthoredData(models.Model):
             return None
 
 
-
-
     def __unicode__(self):
         return "%s (authored by user %s in group %s)" % (self.name,self.user, self.group)
 
@@ -189,6 +181,74 @@ class AuthoredData(models.Model):
 
 
     @staticmethod
+    def object_copy(obj,**kwargs):
+        """
+        Copy a AuthoredData object with modifications as specified by key-value arguments
+        in the kwargs (each key must correspond to one of the AuthoredDataObject model's
+        attributes). The method makes sure that the 'latest' attribute is set correctly.
+
+        """
+
+        # We do not allow the user to specify the 'latest' attribute of the copied
+        # object, since we take care of setting that correctly below.
+
+        kwargs['latest'] = False
+
+        # If no timestamp is provided in the kwargs, we default to now
+
+        timestamp = kwargs.get('timestamp',timezone.now())
+
+        # If no status is provided in the kwargs, the copied object will have the
+        # same status as the existing object
+
+        status = kwargs.get('status',obj.status)
+
+        #
+        # We retrieve the existing objects with same group and identifier
+        #
+
+        existing_objs = AuthoredData.objects.filter(group=obj.group,
+                                                    identifier=obj.identifier)
+
+        # We now find out how we have to set the  ``latest`` attribute
+
+
+
+
+        # If the new object has status AUTOSAVE, latest is never touched.
+
+        if status != AuthoredData.AUTOSAVE:
+
+            younger_objs_count = existing_objs.exclude(status=AuthoredData.AUTOSAVE). \
+                filter(timestamp__gt=timestamp).count()
+            if not younger_objs_count:
+                # The new object will be the most recent object, so we set the attribute
+                # and remove a possible ``latest=True`` from all existing objects.
+                kwargs['latest'] = True
+                existing_objs.update(latest=False)
+            else:
+                kwargs['latest'] = False
+
+        # We copy the object by setting the ``pk`` to None, changing what must be changed,
+        # and saving the object.
+
+        obj.pk = None
+        for key in kwargs:
+            setattr(obj,key,kwargs[key])
+        obj.save()
+
+        return obj
+
+
+        authoring_data_obj.pk = None
+        authoring_data_obj.latest = True
+        authoring_data_obj.timestamp = timezone.now()
+        authoring_data_obj.user = self.request.user
+        authoring_data_obj.save()
+
+
+
+    @staticmethod
     def object_create(kind=None,
                       status=None,
                       author_view='',
@@ -197,7 +257,8 @@ class AuthoredData(models.Model):
                       group=None,
                       identifier=None,
                       name=None,
-                      timestamp=timezone.now()):
+                      timestamp=timezone.now(),
+                      processing_id=''):
 
         if isinstance(identifier,basestring):
             identifier_obj, created = Identifier.objects.get_or_create(name=identifier)
@@ -209,6 +270,18 @@ class AuthoredData(models.Model):
         else:
             author_view_obj = author_view
 
+        existing_objs = AuthoredData.objects.filter(group=group,
+                                                    identifier=identifier_obj)
+
+        latest=False
+
+        if status != AuthoredData.AUTOSAVE:
+            younger_objs_count = existing_objs.exclude(status=AuthoredData.AUTOSAVE).\
+                                                       filter(timestamp__gt=timestamp).count()
+            if not younger_objs_count:
+                existing_objs.update(latest=False)
+                latest= True
+
         return AuthoredData.objects.create(kind=kind,
                                            user=user,
                                            group=group,
@@ -217,11 +290,13 @@ class AuthoredData(models.Model):
                                            author_view=author_view_obj,
                                            data=data,
                                            timestamp=timestamp,
-                                           name=name)
+                                           name=name,
+                                           latest=latest,
+                                           processing_id=processing_id)
 
 
     @staticmethod
-    def object_update(current_kind,
+    def object_update_OUTDATED(current_kind,
                       current_user,
                       current_group,
                       current_identifier,
@@ -255,7 +330,6 @@ class AuthoredData(models.Model):
                                            identifier=current_identifier_obj)
         if current_timestamp == 'latest':
             objs = list(objs.order_by('-timestamp')[:1])
-            print "Found %s" % objs
             if len(objs) == 1:
                 # Below is an ugly hack, but in the limited application here it works.
                 objs[0].__dict__.update(kwargs)
@@ -271,12 +345,11 @@ class AuthoredData(models.Model):
         else:
             raise TypeError("Timestamp must be a timezone value, 'lastest', or 'all'.")
 
-        timestamp=current_timestamp
 
         return objs.update(**kwargs)
 
     @staticmethod
-    def object_update_or_create(current_kind,
+    def object_update_or_create_OUTDATED(current_kind,
                                 current_user,
                                 current_group,
                                 current_identifier,

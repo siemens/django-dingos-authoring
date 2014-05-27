@@ -46,22 +46,20 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                 {% block header_row %}
            	  <thead>
                     <tr>
-                    <th/>
-                    <th scope="col"  class="sortable column-identifier">
-                        {% render_table_ordering "user" "Owner" %}
+                    <th>Latest</th>
+                    <th>
+                       Owner
                     </th>
-                    <th scope="col"  class="sortable column-identifier">
-                        {% render_table_ordering "name" "Name" %}
+                    <th>
+                        Name
                     </th>
-                    <th scope="col"  class="sortable column-identifier">
-                        {% render_table_ordering "status" "Status" %}
-                    </th>
-                    <th scope="col"  class="sortable column-identifier">
-                        {% render_table_ordering "timestamp" "Timestamp" %}
+                    <th>
+                        Status
                     </th>
 
-                    <th></th>
-                    <th></th>
+                    <th>
+                        Timestamp
+                    </th>
 
 
                  </thead>
@@ -73,12 +71,15 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
                     {% for obj in object_list %}
 
-                        <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}">
-                            {% include "dingos/grappelli/includes/CheckboxActionColumn.html" %}
 
+                        <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}">
+                            <td> {%  if obj.latest %}
+                                     X
+                                 {% endif %}
+                            </td>
                             <td> {% if obj.user %}
-                                {{  obj.user }}
-                                {% endif %}
+                                    {{  obj.user }}
+                                 {% endif %}
                             </td>
                             <td>
                                 {{  obj.name }}
@@ -89,17 +90,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                             <td>
                                 {{ obj.timestamp }}
                             </td>
-                            <td>
 
-                                    <a href="{%url 'dingos_authoring.view.authored_object.history' id=obj.identifier.name%}">View History</a>
-
-                            </td>
-
-                            <td>
-                                {%  if obj.user == view.request.user or obj.user == None%}
-                                <a href="{%url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }}">EDIT</a>
-                                {% endif %}
-                            </td>
                         </tr>
                     {% endfor %}
                   </tbody>
