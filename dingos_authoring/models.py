@@ -141,6 +141,10 @@ class AuthoredData(models.Model):
 
     latest = models.BooleanField(default=False)
 
+    yielded = models.OneToOneField("AuthoredData",
+                                   null=True,
+                                   related_name="yieled_by")
+
     @property
     def import_status(self):
         if self.processing_id:
@@ -259,7 +263,8 @@ class AuthoredData(models.Model):
                       identifier=None,
                       name=None,
                       timestamp=timezone.now(),
-                      processing_id=''):
+                      processing_id='',
+                      yielded=None):
 
         if isinstance(identifier,basestring):
             identifier_obj, created = Identifier.objects.get_or_create(name=identifier)
@@ -293,97 +298,10 @@ class AuthoredData(models.Model):
                                            timestamp=timestamp,
                                            name=name,
                                            latest=latest,
-                                           processing_id=processing_id)
+                                           processing_id=processing_id,
+                                           yielded=yielded)
 
 
-    @staticmethod
-    def object_update_OUTDATED(current_kind,
-                      current_user,
-                      current_group,
-                      current_identifier,
-                      current_timestamp,
-                      **kwargs
-                      ):
-
-
-        if isinstance(current_identifier,basestring):
-            current_identifier_obj, created = Identifier.objects.get_or_create(name=current_identifier)
-
-
-        if 'identifier' in kwargs:
-            identifier_value = kwargs['identifier']
-            if isinstance(identifier_value,basestring):
-                identifier_obj, created = Identifier.objects.get_or_create(name=identifier_value)
-                kwargs['identifier'] = identifier_obj
-
-
-        if 'author_view' in kwargs:
-            author_view_value = kwargs['author_view']
-            if isinstance(author_view_value,basestring):
-                author_view_obj, created = AuthorView.objects.get_or_create(name=author_view_value)
-                kwargs['author_view'] = author_view_obj
-
-
-
-        objs = AuthoredData.objects.filter(kind=current_kind,
-                                           user=current_user,
-                                           group=current_group,
-                                           identifier=current_identifier_obj)
-        if current_timestamp == 'latest':
-            objs = list(objs.order_by('-timestamp')[:1])
-            if len(objs) == 1:
-                # Below is an ugly hack, but in the limited application here it works.
-                objs[0].__dict__.update(kwargs)
-                objs[0].save()
-                return 1
-            else:
-                return 0
-
-        elif isinstance(current_timestamp,timezone):
-            objs.filter(timestamp=current_timestamp)
-        elif current_timestamp == 'all':
-            pass
-        else:
-            raise TypeError("Timestamp must be a timezone value, 'lastest', or 'all'.")
-
-
-        return objs.update(**kwargs)
-
-    @staticmethod
-    def object_update_or_create_OUTDATED(current_kind,
-                                current_user,
-                                current_group,
-                                current_identifier,
-                                current_timestamp,
-                                **kwargs):
-
-        if current_timestamp == 'all':
-            raise TypeError("This method cannot be called with timestamp = 'all'.")
-
-        updated_objs = AuthoredData.object_update(current_kind,
-                                                  current_user,
-                                                  current_group,
-                                                  current_identifier,
-                                                  current_timestamp,
-                                                  **kwargs)
-        if updated_objs == 0:
-            # no object was found, so we create one.
-
-            if not 'identifier' in kwargs:
-                kwargs['identifier'] = current_identifier
-            if not 'kind' in kwargs:
-                kwargs['kind'] = current_kind
-            if not 'user' in kwargs:
-                kwargs['user'] = current_user
-            if not 'group' in kwargs:
-                kwargs['group'] = current_group
-            if not 'timestamp' in kwargs:
-                if current_timestamp == 'latest':
-                    kwargs['timestamp'] = timezone.now()
-                else:
-                    kwargs['timestamp'] = current_timestamp
-
-            AuthoredData.object_create(**kwargs)
 
 
 class InfoObject2AuthoredData(models.Model):

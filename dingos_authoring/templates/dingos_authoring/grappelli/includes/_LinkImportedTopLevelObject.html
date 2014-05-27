@@ -1,8 +1,10 @@
+
+
 {% if obj.status == obj.IMPORTED %}
 
-    {% if obj.import_status == 'SUCCESS' %}
 
-        {% url 'url.dingos.view.infoobject' pk=obj.import_result.pk as the_url %}
+    {% if obj.yielded.import_status == 'SUCCESS' %}
+        {% url 'url.dingos.view.infoobject' pk=obj.yielded.import_result.pk as the_url %}
         {% if the_url %}
             <a href="{{ the_url }}"><img src="/static/admin/img/selector-search.gif" alt="Lookup" height="16" width="16"></a>
         {% endif %}
