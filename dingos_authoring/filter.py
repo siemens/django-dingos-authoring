@@ -26,7 +26,7 @@ class AuthoringObjectFilter(django_filters.FilterSet):
     timestamp = ExtendedDateRangeFilter(label="Import Timestamp")
 
 
-    status = django_filters.ChoiceFilter(choices=list(AuthoredData.STATUS) + [('','Any status')],required=False)
+    status = django_filters.ChoiceFilter(choices=list(AuthoredData.STATUS_WO_AUTOSAVE) + [('','Any status')],required=False)
 
     class Meta:
         order_by = create_order_keyword_list(['user','timestamp','name','status'])

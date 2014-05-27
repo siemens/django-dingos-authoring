@@ -32,6 +32,9 @@ from dingos_authoring.view_classes import AuthoringMethodMixin
 
 register = template.Library()
 
+@register.inclusion_tag('dingos_authoring/%s/includes/_LinkImportedTopLevelObject.html'% DINGOS_TEMPLATE_FAMILY)
+def show_imported_top_level_object(obj):
+    return {'obj':obj}
 
 
 @register.inclusion_tag('dingos_authoring/%s/includes/_AuthoringNamespacesDisplay.html'% DINGOS_TEMPLATE_FAMILY,takes_context=True)

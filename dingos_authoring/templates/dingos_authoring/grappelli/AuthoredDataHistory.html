@@ -31,7 +31,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 {% block list_title %}Saved Drafts {% endblock %}
 
 {% block right_column %}
-{{ block.super  }}
+
 {% show_AuthoringNamespaces %}
 {% endblock %}
 
@@ -51,16 +51,13 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                        Owner
                     </th>
                     <th>
-                        Name
-                    </th>
-                    <th>
                         Status
                     </th>
 
                     <th>
                         Timestamp
                     </th>
-
+                    <th></th>
 
                  </thead>
                 {% endblock %}
@@ -82,15 +79,20 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                                  {% endif %}
                             </td>
                             <td>
-                                {{  obj.name }}
-                            </td>
-                            <td>
-                                {{  obj.get_status_display }}
+                                {{  obj.get_status_display }} {% show_imported_top_level_object obj %}
                             </td>
                             <td>
                                 {{ obj.timestamp }}
                             </td>
+                            <td>
+                                {%  if obj.latest %}
+                                    {% if obj.user == view.request.user or obj.user == None%}
+                                    <a class="grp-button" href="{%url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }}">EDIT</a>
+                                    {% endif %}
+                                {%  endif %}
 
+
+                            </td>
                         </tr>
                     {% endfor %}
                   </tbody>

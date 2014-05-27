@@ -68,26 +68,26 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                     {% for obj in object_list %}
                         {%  with obj.import_status as import_status %}
 
-                        <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}">
-                            <td>
-                               {{ obj.import_status }}
-                            </td>
-                            <td>
-                               {{ obj.timestamp }}
-                            </td>
-                            <td>
-                               {{ obj.get_kind_display }}
-                            </td>
-                            <td>
-                                {{ obj.name }}
-                            </td>
+                            <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}">
+                                <td>
+                                    {{ obj.import_status }}
+                                </td>
+                                <td>
+                                    {{ obj.timestamp }}
+                                </td>
+                                <td>
+                                    {{ obj.get_kind_display }}
+                                </td>
+                                <td>
+                                    {{ obj.name }}
+                                </td>
 
-                            <td>{% if import_status == 'SUCCESS' %}
+                                <td>{% if import_status == 'SUCCESS' %}
 
-                                {% url 'url.dingos.view.infoobject' pk=obj.import_result.pk as the_url %}
-                                {% if the_url %}
-                                    <a href="{{ the_url }}"><img src="/static/admin/img/selector-search.gif" alt="Lookup" height="16" width="16"></a>
-                                {% endif %}
+                                    {% url 'url.dingos.view.infoobject' pk=obj.import_result.pk as the_url %}
+                                    {% if the_url %}
+                                        <a href="{{ the_url }}"><img src="/static/admin/img/selector-search.gif" alt="Lookup" height="16" width="16"></a>
+                                    {% endif %}
 
                                    {{ obj.import_result.name }} ({{ obj.import_result.identifier_namespace_uri }}:{{ obj.import_result.identifier_uid }})
                                 {% endif %}

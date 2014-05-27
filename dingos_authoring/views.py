@@ -95,6 +95,8 @@ class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
 
     template_name = 'dingos_authoring/%s/AuthoredDataHistory.html' % DINGOS_TEMPLATE_FAMILY
 
+    counting_paginator = True
+
     @property
     def title(self):
         latest_auth_obj = AuthoredData.objects.get(group=self.namespace_info['authoring_group'],
@@ -121,6 +123,8 @@ class index(AuthoringMethodMixin,BasicFilterView):
     Overview of saved drafts.
     """
 
+    counting_paginator = True
+
     @property
     def title(self):
 
@@ -145,7 +149,7 @@ class index(AuthoringMethodMixin,BasicFilterView):
 
         return AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,group=namespace_info['authoring_group'],latest=True)
                                            &
-                                           (Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))). \
+                                           (Q(status=AuthoredData.UPDATE) | Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))). \
             prefetch_related('identifier','group','user','author_view')
 
 
@@ -262,19 +266,23 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                                                       group=authoring_group,
                                                       identifier__name=name,
                                                       latest=True,
-                                                      status=AuthoredData.DRAFT)
+                                                      )
+                                                     & (Q(status=AuthoredData.DRAFT)
+                                                        |Q(status=AuthoredData.UPDATE)
+                                                        |Q(status=AuthoredData.IMPORTED))
                                                      &
                                                      (Q(user__isnull=True) | Q(user=self.request.user))
 
                                                       )
             except ObjectDoesNotExist:
-                res['msg'] = 'Could not find object %s of group %s' %(name,authoring_group)
+                res['msg'] = 'Could not access object %s of group %s' %(name,authoring_group)
                 res['status'] = False
+                return res
             except MultipleObjectsReturned:
                 res['msg'] = """Something is wrong in the database: there are several "latest" objects
                                 of group %s with identifier %s""" % (authoring_group,name)
+                return res
 
-            print "JSON obj %s with user %s" % (json_obj,json_obj.user)
             if not json_obj.user:
                 # The user needs to take the object in order to edit it -- this is
                 # done automatically here.
@@ -287,7 +295,7 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
             res['data']['name'] = json_obj.name
             res['data']['id'] = json_obj.identifier.name
             res['status'] = True
-            res['msg'] = 'Loaded template \'' + json_obj.name + '\''
+            res['msg'] = 'Loaded \'' + json_obj.name + '\''
             #except:
             #    res['status'] = False
             #    res['msg'] = 'Something went wrong; could not load report.'
@@ -408,7 +416,9 @@ class TakeReportView(AuthoringMethodMixin,BasicListActionView):
         base_query = AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,
                                                    group=self.namespace_info['authoring_group'],
                                                    latest=True) &
-                                                 Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))
+                                                 (Q(status=AuthoredData.DRAFT)
+                                                  | Q(status=AuthoredData.UPDATE)
+                                                  | Q(status=AuthoredData.IMPORTED)))
         return base_query
 
 
@@ -425,7 +435,7 @@ class TakeReportView(AuthoringMethodMixin,BasicListActionView):
         elif authoring_data_obj.status == AuthoredData.IMPORTED:
             obj= AuthoredData.object_copy(authoring_data_obj,
                                          user= self.request.user,
-                                         status = AuthoredData.DRAFT)
+                                         status = AuthoredData.UPDATE)
             return (True, "'%s' has been put into DRAFT mode and is now owned by you." % obj.name)
         else:
             return (False, "Do not know how to treat '%s'" % authoring_data_obj.name)

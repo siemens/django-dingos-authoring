@@ -107,15 +107,16 @@ class AuthoredData(models.Model):
 
     DRAFT = 0
     IMPORTED = 1
-    TEMPLATE = 2
+    UPDATE = 2
     AUTOSAVE = 3
 
 
     STATUS_WO_AUTOSAVE = ((DRAFT,"Draft"),
                           (IMPORTED,"Imported"),
-                          (TEMPLATE,"Template"))
+                          (UPDATE,"Update (not yet imported)"),
+                          )
 
-    STATUS = tuple(list(STATUS_WO_AUTOSAVE) + [(AUTOSAVE,"Autsave")])
+    STATUS = tuple(list(STATUS_WO_AUTOSAVE) + [(AUTOSAVE,"Autosave")])
 
     status = models.SmallIntegerField(choices=STATUS,
                                     default=DRAFT,

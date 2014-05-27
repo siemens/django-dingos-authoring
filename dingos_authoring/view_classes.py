@@ -122,14 +122,15 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                         previous_obj = AuthoredData.objects.get(identifier__name=identifier,
                                                                 group = namespace_info['authoring_group'],
                                                                 latest = True)
+                        status = previous_obj.status
+                        if status == AuthoredData.IMPORTED:
+                            status = AuthoredData.UPDATE
                     except ObjectDoesNotExist:
                         previous_obj = None
-
+                        status = AuthoredData.DRAFT
 
 
                     if previous_obj and previous_obj.data == jsn:
-                        print previous_obj.data
-                        print jsn
                         res['msg'] = "No changes to be saved. "
                         previous_obj.timestamp = timezone.now()
                         previous_obj.save()
@@ -139,13 +140,12 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                                    group=namespace_info['authoring_group'],
                                                    identifier= identifier,
                                                    timestamp=timezone.now(),
-                                                   status=AuthoredData.DRAFT,
+                                                   status=status,
                                                    name=submit_name,
                                                    author_view=self.author_view,
                                                    data = jsn)
 
                         res['msg'] = 'Changes saved. '
-                        print "Created obj %s with status %s, latest %s and timestamp %s" % (obj.identifier,obj.status,obj.latest,obj.timestamp)
 
                     if submit_action == 'release':
                         obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
@@ -153,7 +153,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                                    group=namespace_info['authoring_group'],
                                                    identifier= identifier,
                                                    timestamp=timezone.now(),
-                                                   status=AuthoredData.DRAFT,
+                                                   status=status,
                                                    name=submit_name,
                                                    author_view=self.author_view,
                                                    data = jsn)

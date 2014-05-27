@@ -84,20 +84,21 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                                 {{  obj.name }}
                             </td>
                             <td>
-                                {{  obj.get_status_display }}
+                                {{  obj.get_status_display }} {% show_imported_top_level_object obj %}
                             </td>
                             <td>
                                 {{ obj.timestamp }}
                             </td>
+
                             <td>
 
-                                    <a href="{%url 'dingos_authoring.view.authored_object.history' id=obj.identifier.name%}">View History</a>
+                                    <a class="grp-button" href="{%url 'dingos_authoring.view.authored_object.history' id=obj.identifier.name%}">View History</a>
 
                             </td>
 
                             <td>
                                 {%  if obj.user == view.request.user or obj.user == None%}
-                                <a href="{%url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }}">EDIT</a>
+                                    <a class="grp-button" href="{%url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }}">EDIT</a>
                                 {% endif %}
                             </td>
                         </tr>
