@@ -48,12 +48,14 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                     <tr>
                     <th>Latest</th>
                     <th>
-                       Owner
+                        Owner
                     </th>
                     <th>
                         Status
                     </th>
-
+                    <th>
+                        Kind
+                    </th>
                     <th>
                         Timestamp
                     </th>
@@ -81,6 +83,10 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                             <td>
                                 {{  obj.get_status_display }} {% show_imported_top_level_object obj %}
                             </td>
+                            <td>
+                                {{  obj.get_kind_display }}
+                            </td>
+
                             <td>
                                 {{ obj.timestamp }}
                             </td>

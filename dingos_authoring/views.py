@@ -101,16 +101,22 @@ class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
     def title(self):
         latest_auth_obj = AuthoredData.objects.get(group=self.namespace_info['authoring_group'],
                                                       identifier__name=self.kwargs['id'],
+                                                      kind=AuthoredData.XML,
                                                       latest=True)
         return "History of '%s' " % latest_auth_obj.name
 
     @property
     def queryset(self):
 
-        try:
-            namespace_info = self.get_authoring_namespaces(self.request.user)
-        except StandardError, e:
-            messages.error(self.request,e.message)
+        namespace_info = self.namespace_info
+
+        if not namespace_info:
+            messages.error(self.request,"You are not member of an authoring group.")
+            return AuthoredData.objects.exclude(id__contains='')
+        if isinstance(namespace_info,list):
+            messages.error(self.request,"You are member of several authoring groups but have not selected a"
+                                        " default group.")
+
             return AuthoredData.objects.exclude(id__contains='')
 
 
@@ -141,11 +147,17 @@ class index(AuthoringMethodMixin,BasicFilterView):
     @property
     def queryset(self):
 
-        try:
-            namespace_info = self.namespace_info
-        except StandardError, e:
-            messages.error(self.request,e.message)
-            return AuthoredData.objects.exclude(id__contains='')
+
+        namespace_info = self.namespace_info
+
+        if not namespace_info:
+            messages.error(self.request,'You are not member of an Authoring Group')
+            return AuthoredData.objects.exclude(pk__gt=-1)
+        elif isinstance(namespace_info,list):
+            messages.error(self.request,'You are member of several authoring groups but you have not selected an' \
+                                        ' active authoring group.')
+            return AuthoredData.objects.exclude(pk__gt=-1)
+
 
         return AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,group=namespace_info['authoring_group'],latest=True)
                                            &
@@ -283,10 +295,17 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                                 of group %s with identifier %s""" % (authoring_group,name)
                 return res
 
+
+
+
             if not json_obj.user:
                 # The user needs to take the object in order to edit it -- this is
                 # done automatically here.
-                json_obj = AuthoredData.object_copy(json_obj,user=self.request.user)
+                if json_obj.status == AuthoredData.IMPORTED:
+                    status = AuthoredData.UPDATE
+                else:
+                    status = json_obj.status
+                json_obj = AuthoredData.object_copy(json_obj,user=self.request.user,status=status)
                 print "JSON obj %s with user %s" % (json_obj,json_obj.user)
 
 
@@ -615,13 +634,13 @@ class GetAuthoringNamespace(BasicJSONView, AuthoringMethodMixin):
     def returned_obj(self):
         res = {
             'status': False,
-            'msg': 'An error occured fetching your namespace information',
+            'msg': 'An error occurred fetching your namespace information',
             'data': None
         }
 
         if self.request.user:
             try:
-                ns = self.get_authoring_namespaces(self.request.user)
+                ns = self.get_authoring_namespaces(self.request.user,fail_silently=False)
                 del ns['authoring_group']
                 res['status'] = True
                 res['msg'] = ''

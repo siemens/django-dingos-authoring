@@ -46,8 +46,12 @@ def show_AuthoringNamespaces(context):
     current_group = None
     allowed_uris = None
     namespace_uri = None
+    error_msg = "You are not member of an authoring group!"
 
-    if namespace_info:
+
+    if isinstance(namespace_info,list):
+        error_msg = "Please select an authoring group!"
+    elif namespace_info:
         current_group=namespace_info['authoring_group']
         namespace_uri=namespace_info['default_ns_uri']
         allowed_uris = set(namespace_info['allowed_ns_uris'])
@@ -56,7 +60,8 @@ def show_AuthoringNamespaces(context):
 
     result =  {'current_group':current_group,
                'allowed_ns_uris' : allowed_uris,
-               'default_ns_uri' : namespace_uri}
+               'default_ns_uri' : namespace_uri,
+               'error_msg': error_msg}
 
 
     return result

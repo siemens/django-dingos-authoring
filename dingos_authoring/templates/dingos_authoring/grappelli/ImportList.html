@@ -49,9 +49,6 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                         {% render_table_ordering "timestamp" "Timestamp" %}
                     </th>
                     <th scope="col"  class="sortable column-identifier">
-                        {% render_table_ordering "kind" "Kind" %}
-                    </th>
-                    <th scope="col"  class="sortable column-identifier">
                         {% render_table_ordering "name" "Name" %}
                     <th>
                         Top-level object
@@ -75,24 +72,34 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                                 <td>
                                     {{ obj.timestamp }}
                                 </td>
-                                <td>
-                                    {{ obj.get_kind_display }}
-                                </td>
+
                                 <td>
                                     {{ obj.name }}
                                 </td>
 
-                                <td>{% if import_status == 'SUCCESS' %}
+                                <td>
+                                    {% if import_status == 'SUCCESS' %}
 
-                                    {% url 'url.dingos.view.infoobject' pk=obj.import_result.pk as the_url %}
+                                        {% url 'url.dingos.view.infoobject' pk=obj.import_result.pk as the_url %}
+                                        {% if the_url %}
+                                            <a href="{{ the_url }}"><img src="/static/admin/img/selector-search.gif" alt="Lookup" height="16" width="16"></a>
+                                        {% endif %}
+
+                                     {{ obj.import_result.name }} ({{ obj.import_result.identifier_namespace_uri }}:{{ obj.import_result.identifier_uid }})
+                                    {% endif %}
+                            </td>
+                            <td>
+                                {%  if obj.yielded_by  %}
+                                    {% url 'dingos_authoring.view.authored_object.history' id=obj.yielded_by.identifier as the_url %}
                                     {% if the_url %}
-                                        <a href="{{ the_url }}"><img src="/static/admin/img/selector-search.gif" alt="Lookup" height="16" width="16"></a>
+                                        <a href="{{ the_url }}"><img src="/static/admin/img/selector-search.gif" alt="Lookup" height="16" width="16">Source</a>
                                     {% endif %}
 
-                                   {{ obj.import_result.name }} ({{ obj.import_result.identifier_namespace_uri }}:{{ obj.import_result.identifier_uid }})
+
+
+                                    {{  obj.yielded_by }}
                                 {% endif %}
                             </td>
-
 
 
 

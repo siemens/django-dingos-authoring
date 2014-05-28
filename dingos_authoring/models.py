@@ -58,6 +58,8 @@ class Identifier(models.Model):
 
 
 
+
+
 class GroupNamespaceMap(models.Model):
     """
 
@@ -86,6 +88,22 @@ class GroupNamespaceMap(models.Model):
                                                  'allowed':namespace_info.allowed_namespaces.all()}
 
         return result
+
+    def __unicode__(self):
+        return "%s" % self.group
+
+
+class UserAuthoringInfo(models.Model):
+    """
+
+    """
+    user = models.ForeignKey(User,unique=True)
+    default_authoring_namespace_info = models.ForeignKey(GroupNamespaceMap)
+
+    def __unicode__(self):
+        return "User: %s authors in %s" % (self.user,self.default_authoring_group_info.group)
+
+
 
 
 
@@ -143,7 +161,7 @@ class AuthoredData(models.Model):
 
     yielded = models.OneToOneField("AuthoredData",
                                    null=True,
-                                   related_name="yieled_by")
+                                   related_name="yielded_by")
 
     @property
     def import_status(self):
@@ -237,19 +255,21 @@ class AuthoredData(models.Model):
         # We copy the object by setting the ``pk`` to None, changing what must be changed,
         # and saving the object.
 
+
+        # Never copy 'yielded' information, since this is a OnetoOne field
+
+        kwargs['yielded'] = None
+
         obj.pk = None
         for key in kwargs:
             setattr(obj,key,kwargs[key])
+
+        obj.timestamp = timestamp
+
         obj.save()
 
         return obj
 
-
-        authoring_data_obj.pk = None
-        authoring_data_obj.latest = True
-        authoring_data_obj.timestamp = timezone.now()
-        authoring_data_obj.user = self.request.user
-        authoring_data_obj.save()
 
 
 

@@ -19,7 +19,7 @@ import json
 
 from dingos.view_classes import BasicView
 
-from .models import AuthoredData, GroupNamespaceMap
+from .models import AuthoredData, GroupNamespaceMap, UserAuthoringInfo
 
 from django.http import HttpResponse, HttpResponseRedirect
 
@@ -37,48 +37,69 @@ class AuthoringMethodMixin(object):
 
 
     @staticmethod
-    def get_authoring_namespaces(user,force_single_group=True,fail_silently=False):
+    def get_authoring_namespaces(user,fail_silently=True):
+        # Is there a default authoring namespace for this user?
+        try:
+            user_authoring_info = UserAuthoringInfo.objects.get(user=user)
+            namespace_info = user_authoring_info.default_authoring_namespace_info
 
-        namespace_infos = GroupNamespaceMap.get_authoring_namespace_info(user)
+        except ObjectDoesNotExist:
 
-        if len(namespace_infos.keys()) == 0:
-            if fail_silently:
-                return None
+            # No default exists. Let's see whether the user is associated
+            # with any authoring group
+
+            namespace_infos = GroupNamespaceMap.get_authoring_namespace_info(user)
+
+
+            if len(namespace_infos.keys()) == 0:
+                # No authoring for this user; fail silently or complain
+                if fail_silently:
+                    return None
+                else:
+                    raise StandardError("User not allowed to author data.")
+            elif len(namespace_infos.keys()) > 1 :
+                # more than one group, but no default has been defined
+                # (see above). Therefore: silently fail or complain.
+                if fail_silently:
+                    return namespace_infos.items()
+                else:
+                    raise StandardError("Current user is member of more than one authoring groups")
+
             else:
-                raise StandardError("User not allowed to author data.")
-        elif len(namespace_infos.keys()) > 1 and force_single_group:
-            if fail_silently:
-                return None
-            else:
-                raise StandardError("Current user is member of more than one authoring groups")
-        elif force_single_group:
-            namespace_info = namespace_infos.values()[0]
-            default_namespace = namespace_info['default']
+                # There must be exactly one associated authoring group for this user
+                namespace_info = namespace_infos.values()[0]
+
+        default_namespace = namespace_info['default']
+        namespace_uri = default_namespace.uri
+        namespace_slug = default_namespace.name
+        if not namespace_slug:
+            namespace_slug = 'dingos_author'
+
+        allowed_namespace_uris = map(lambda x: x.uri, namespace_info['allowed'])
+        return {'authoring_group': namespace_info['authoring_group'],
+                'default_ns_uri': namespace_uri,
+                'default_ns_slug': namespace_slug,
+                'allowed_ns_uris': allowed_namespace_uris}
 
 
-            namespace_uri = default_namespace.uri
-            namespace_slug = default_namespace.name
-            if not namespace_slug:
-                namespace_slug = 'dingos_author'
+    # To make sure that a view does not have to call get_authoring_namespaces more than once,
+    # we store the result of the namespace lookup in the following variable:
 
-            allowed_namespace_uris = map(lambda x: x.uri, namespace_info['allowed'])
-            return {'authoring_group': namespace_info['authoring_group'],
-                    'default_ns_uri': namespace_uri,
-                    'default_ns_slug': namespace_slug,
-                    'allowed_ns_uris': allowed_namespace_uris}
-        else:
-            raise NotImplementedError("Functionality for several authoring groups not yet implemented")
-
-
-    _namespace_info = None
+    _namespace_info = False
 
     @property
-    def namespace_info(self,reload=False):
+    def namespace_info(self):
+        """
+        Lookup authoring namespace information for the user;
+        the result (either ``None``, the retrieved information
+        for a single or the default authoring group, or a list
+        of results for several authoring groups)
 
-        if self._namespace_info and not reload:
+        is stored in ``self._namespace_info``.
+        """
+        if self._namespace_info != False:
             return self._namespace_info
         else:
-            print "Loading namesapce info"
             self._namespace_info = self.get_authoring_namespaces(self.request.user,fail_silently=True)
             return self._namespace_info
 
@@ -97,8 +118,6 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
         try:
             POST = request.POST
-            print "POST"
-            print POST
             res['msg']=''
             jsn = ''
             if POST.has_key(u'jsn'):
@@ -114,6 +133,11 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                 namespace_info = self.namespace_info
                 if not namespace_info:
                     res['msg'] = 'You are not member of an Authoring Group'
+                    res['status'] = False
+                    return HttpResponse(json.dumps(res), content_type="application/json")
+                elif isinstance(namespace_info,list):
+                    res['msg'] = 'You are member of several authoring groups but you have not selected a' \
+                                 ' default authoring group.'
                     res['status'] = False
                     return HttpResponse(json.dumps(res), content_type="application/json")
 
@@ -192,14 +216,12 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                         result = scheduled_import.delay(importer,res['xml'])
 
 
-                        timestamp = timezone.now()
-
 
                         xml_import_obj = AuthoredData.object_create(kind=AuthoredData.XML,
                                                    user=request.user,
                                                    group=namespace_info['authoring_group'],
                                                    identifier= identifier,
-                                                   timestamp=timestamp,
+                                                   timestamp=timezone.now(),
                                                    status=AuthoredData.IMPORTED,
                                                    name=submit_name,
                                                    author_view=None,
@@ -210,7 +232,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                                    user=None,
                                                    group=namespace_info['authoring_group'],
                                                    identifier= identifier,
-                                                   timestamp= timestamp,
+                                                   timestamp= timezone.now(),
                                                    status=AuthoredData.IMPORTED,
                                                    name=submit_name,
                                                    author_view=self.author_view,
