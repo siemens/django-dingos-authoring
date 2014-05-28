@@ -40,7 +40,10 @@ from dingos.importer import Generic_XML_Import
 from querystring_parser import parser
 
 
-from models import GroupNamespaceMap
+from .models import GroupNamespaceMap
+from .tasks import add
+
+
 
 from django.views.generic import View
 
@@ -598,3 +601,17 @@ class ValidateObject(FormView):
             'data': self.errors_to_json(form.errors)
         }
         return HttpResponse(json.dumps(res), content_type='application/json', )
+
+
+
+class CeleryTest(BasicJSONView):
+    @property
+    def returned_obj(self):
+        print "Called"
+        #result = add.AsyncResult('35468ff5-c3d5-4e91-97b0-a5e9301adbe3')#06b2c139-62d5-4475-a474-099569bb0e8b')
+        result = add.delay(2,2)
+        try:
+            value = result.get(timeout=1)
+        except:
+            value = "Timeout"
+        return {'sid':result.id, 'name':add.name,'value':value}
