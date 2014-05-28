@@ -27,7 +27,7 @@ from django.utils import timezone
 from django.contrib import messages
 
 from django.contrib.auth.models import User, Group
-
+from mantis_authoring.utilities import name_cybox_obj, find_similar_cybox_obj
 
 
 from braces.views import LoginRequiredMixin, SuperuserRequiredMixin
@@ -106,9 +106,6 @@ class GetAuthoringObjectReference(BasicJSONView):
         }
 
         POST = self.request.POST
-        # TODO: POST contains the frontend object We now need to
-        # invoke some functionality depending on the object to
-        # generate lookahead elements
         post_dict = parser.parse(POST.urlencode())
 
         object_element = post_dict.get('el', {})
@@ -119,10 +116,17 @@ class GetAuthoringObjectReference(BasicJSONView):
         if not object_element or not object_type or object_type == '':
             pass
         elif object_type == 'campaign':
+            q_q = Q(name__icontains=queryterm) & Q(iobject_type__name__icontains="Campaign")
+            data =  InfoObject.objects.all(). \
+                    exclude(latest_of=None). \
+                    exclude(iobject_family__name__exact=DINGOS_INTERNAL_IOBJECT_FAMILY_NAME). \
+                    exclude(iobject_family__name__exact='ioc'). \
+                    filter(q_q). \
+                    distinct().order_by('name')[:10]
             # TODO: fetch campaigns and associated threatactor from DB
-            #res['data'] = [{'id': 'ididididid', 'name': 'namenamenamename', 'cat': 'catcatcat', 'threatactor':{'id': 'taid', 'value': 'ta_label', 'label': 'ta_label'}}]
-            res['data'] = []
-
+            res['data'] = map(lambda x : {'id': x.identifier.uid, 'name': x.name, 'cat': str(x.iobject_type), 'threatactor': {}}, data)
+        
+            
         elif object_type == 'threatactor':
             q_q = Q(name__icontains=queryterm) & Q(iobject_type__name__icontains="ThreatActor")
             data =  InfoObject.objects.all(). \
@@ -144,6 +148,61 @@ class GetAuthoringObjectReference(BasicJSONView):
             except Exception as e:
                 res['msg'] = str(e)
                 
+        return res
+
+
+
+class GetAuthoringSimilarObjects(BasicJSONView):
+    """
+    View serving a list of similar objects
+    """
+    @property
+    def returned_obj(self):
+        res = {
+            'status': False,
+            'msg': 'An error occured',
+            'data': {
+                'items': []
+            }
+        }
+
+        POST = self.request.POST
+        post_dict = parser.parse(POST.urlencode())
+
+        object_element = post_dict.get('observable_properties', {})
+        object_type = object_element.get('object_type', '').lower().strip()
+        object_subtype = object_element.get('object_subtype', 'Default')
+
+        try:
+            im = importlib.import_module('mantis_authoring.cybox_object_transformers.' + object_type)
+            template_obj = getattr(im,'TEMPLATE_%s' % object_subtype)()
+            cybox_xml = template_obj.process_form(object_element).to_xml()
+            fact_term_list = template_obj.get_relevant_fact_term_list()
+            similar_objects = find_similar_cybox_obj(cybox_xml, fact_term_list)
+            for similar_obj in similar_objects:
+                sobj = similar_obj.facts.all()
+                sobj = sobj.filter(fact_term__term__in=fact_term_list)
+
+                det = []
+                for fact in sobj:
+                    det.append(
+                        ', '.join(map(lambda x: x.get('value') ,fact.fact_values.values()))
+                    )
+
+
+                res['data']['items'].append({
+                    'title': similar_obj.name,
+                    'details': ', '.join(det)
+                })
+            res['status'] = True
+            if(len(res['data']['items'])==0):
+                res['status'] = False
+                res['msg'] = 'Sorry, we could not find similar objects!'
+
+        except Exception as e:
+            raise e
+            res['msg'] = str(e)
+        
         return res
 
 
