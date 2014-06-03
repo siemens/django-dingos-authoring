@@ -819,14 +819,13 @@ class CeleryTest(SuperuserRequiredMixin,BasicJSONView):
     def returned_obj(self):
 
         result = add.delay(2,2)
-        try:
-            status0 = result.status
-            value1 = result.get(timeout=0.1)
-            status1 = result.status
-            value2 = result.get(timeout=0.1)
-            status2 = result.status
-        except:
-            value = "Timeout"
+
+        status0 = result.status
+        value1 = result.get(timeout=0.1)
+        status1 = result.status
+        value2 = result.get(timeout=0.1)
+        status2 = result.status
+
         return [('sid',result.id),
                 ('name',add.name),
                 ('status0',status0),
