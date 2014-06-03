@@ -193,7 +193,7 @@ class AuthoredData(models.Model):
 
 
     def __unicode__(self):
-        return "%s (authored by user %s in group %s)" % (self.name,self.user, self.group)
+        return "%s " % (self.name)
 
     class Meta:
         unique_together = ("group",

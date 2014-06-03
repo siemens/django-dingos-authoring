@@ -48,7 +48,7 @@ from querystring_parser import parser
 
 
 from .models import GroupNamespaceMap, AuthoredData, Identifier
-from .tasks import add, scheduled_import
+
 from .filter import ImportFilter, AuthoringObjectFilter
 
 
@@ -86,6 +86,20 @@ AUTHORING_IMPORTER_REGISTRY = []
 for (matcher,module,class_name) in DINGOS_AUTHORING_IMPORTER_REGISTRY:
     my_module = importlib.import_module(module)
     AUTHORING_IMPORTER_REGISTRY.append((matcher,getattr(my_module,class_name)))
+
+
+# Ordinarily, the celery tasks used here should be imported like so::
+#    from .tasks import add, scheduled_import
+# There is however, at least one installation, where this does not work:
+# the task returned via this import does not have set the
+# right results backend.
+# So we prune the required tasks from the app object defined in mantis.celery
+# until the issue is resolved
+
+from mantis.celery import app as celery_app
+
+add = celery_app.tasks['dingos_authoring.tasks.add']
+scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
 
 
 class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
@@ -507,7 +521,7 @@ class TakeReportView(AuthoringMethodMixin,BasicListActionView):
     def _take_authoring_data_obj(self,form_data,authoring_data_obj):
         if authoring_data_obj.user == self.request.user:
             return (None,"'%s' is already owned by you." % authoring_data_obj.name)
-        elif authoring_data_obj.status == AuthoredData.DRAFT:
+        elif authoring_data_obj.status in [AuthoredData.DRAFT,AuthoredData.UPDATE]:
             old_user = authoring_data_obj.user
             obj = AuthoredData.object_copy(authoring_data_obj, user= self.request.user)
 
@@ -818,19 +832,26 @@ class CeleryTest(SuperuserRequiredMixin,BasicJSONView):
     @property
     def returned_obj(self):
 
+
+
+        #from mantis.celery import app
+
+        #return ["%s" % app.backend,
+        #        "%s" % add,
+        #        "%s" % add.backend,
+        #        map(lambda x: ("%s" % app.tasks[x], "%s" % app.tasks[x].backend), app.tasks)]
+
         result = add.delay(2,2)
 
         status0 = result.status
-        value1 = result.get(timeout=0.1)
+        value1 = result.get(timeout=1)
         status1 = result.status
-        value2 = result.get(timeout=0.1)
-        status2 = result.status
 
         return [('sid',result.id),
+                ('backend',"%s" % add.backend),
                 ('name',add.name),
                 ('status0',status0),
                 ('value1',value1),
                 ('status1',status1),
-                ('value2',value2),
-                ('status2',status2),
+
                 ]
