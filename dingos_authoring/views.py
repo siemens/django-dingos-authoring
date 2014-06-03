@@ -814,14 +814,24 @@ class ValidateObject(FormView):
 
 
 
-class CeleryTest(BasicJSONView):
+class CeleryTest(SuperuserRequiredMixin,BasicJSONView):
     @property
     def returned_obj(self):
-        print "Called"
-        #result = add.AsyncResult('35468ff5-c3d5-4e91-97b0-a5e9301adbe3')#06b2c139-62d5-4475-a474-099569bb0e8b')
+
         result = add.delay(2,2)
         try:
-            value = result.get(timeout=1)
+            status0 = result.status
+            value1 = result.get(timeout=0.1)
+            status1 = result.status
+            value2 = result.get(timeout=0.1)
+            status2 = result.status
         except:
             value = "Timeout"
-        return {'sid':result.id, 'name':add.name,'value':value}
+        return [('sid',result.id),
+                ('name',add.name),
+                ('status0',status0),
+                ('value1',value1),
+                ('status1',status1),
+                ('value2',value2),
+                ('status2',status2),
+                ]
