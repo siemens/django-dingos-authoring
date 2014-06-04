@@ -18,7 +18,7 @@
 
 from django.contrib import admin
 
-from models import AuthoredData, InfoObject2AuthoredData, GroupNamespaceMap, AuthorView
+from models import AuthoredData, GroupNamespaceMap, AuthorView
 
 
 
@@ -78,7 +78,6 @@ from models import AuthoredData, InfoObject2AuthoredData, GroupNamespaceMap, Aut
 
 
 admin.site.register(AuthoredData)
-admin.site.register(InfoObject2AuthoredData)
 admin.site.register(AuthorView)
 admin.site.register(GroupNamespaceMap)
 
