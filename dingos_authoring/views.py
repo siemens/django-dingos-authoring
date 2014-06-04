@@ -115,7 +115,6 @@ class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
     def title(self):
         latest_auth_obj = AuthoredData.objects.get(group=self.namespace_info['authoring_group'],
                                                       identifier__name=self.kwargs['id'],
-                                                      kind=AuthoredData.XML,
                                                       latest=True)
         return "History of '%s' " % latest_auth_obj.name
 

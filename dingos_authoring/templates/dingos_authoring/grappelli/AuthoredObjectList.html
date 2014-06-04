@@ -77,7 +77,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                             {% include "dingos/grappelli/includes/CheckboxActionColumn.html" %}
 
                             <td> {% if obj.user %}
-                                {{  obj.user }}
+                                {{  obj.user | nice_name }}
                                 {% endif %}
                             </td>
                             <td>
