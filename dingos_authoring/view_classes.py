@@ -29,6 +29,12 @@ from django.utils import timezone
 
 from .tasks import scheduled_import
 
+import logging
+
+import traceback
+
+logger = logging.getLogger(__name__)
+
 class AuthoringMethodMixin(object):
     """
     We use this Mixin to enrich view with methods that are required
@@ -213,20 +219,23 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                                             substitute_unallowed_namespaces=True)
 
 
-                        result = scheduled_import.delay(importer,res['xml'])
-
-
-
                         xml_import_obj = AuthoredData.object_create(kind=AuthoredData.XML,
-                                                   user=request.user,
-                                                   group=namespace_info['authoring_group'],
-                                                   identifier= identifier,
-                                                   timestamp=timezone.now(),
-                                                   status=AuthoredData.IMPORTED,
-                                                   name=submit_name,
-                                                   author_view=None,
-                                                   data = res['xml'],
-                                                   processing_id = result.id)
+                                                                    user=request.user,
+                                                                    group=namespace_info['authoring_group'],
+                                                                    identifier= identifier,
+                                                                    timestamp=timezone.now(),
+                                                                    status=AuthoredData.IMPORTED,
+                                                                    name=submit_name,
+                                                                    author_view=None,
+                                                                    data = res['xml'])
+
+                        result = scheduled_import.delay(importer=importer,
+                                                        xml=res['xml'],
+                                                        xml_import_obj=xml_import_obj)
+
+                        xml_import_obj.processing_id = result.id
+
+                        xml_import_obj.save()
 
                         AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
                                                    user=None,
@@ -244,8 +253,8 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                         res['msg'] += "Import started and report released. "
 
         except Exception, e:
-            res['msg'] = "An error occured: %s" % e.message
-            logger.error("Authoring attempt resulted in error %s, traceback %s" % (e.message,traceback.format_exc()))
+            res['msg'] = "An error occured: %s" % str(e)
+            logger.error("Authoring attempt resulted in error %s, traceback %s" % (str(e),traceback.format_exc()))
             res['status'] = False
 
 

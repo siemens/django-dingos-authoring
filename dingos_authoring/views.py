@@ -135,7 +135,17 @@ class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
 
         return AuthoredData.objects.filter(group=self.namespace_info['authoring_group'],
                                                   identifier__name=self.kwargs['id']).order_by('-timestamp'). \
-            prefetch_related('identifier','group','user','author_view')
+            prefetch_related('identifier','group','user','author_view').prefetch_related('top_level_iobject',
+                                                                                         'top_level_iobject__identifier',
+                                                                                         'top_level_iobject__identifier__namespace')
+
+    def get_context_data(self, **kwargs):
+
+        context = super(AuthoredDataHistoryView, self).get_context_data(**kwargs)
+
+        context['highlight_pk'] = self.request.GET.get('highlight',None)
+
+        return context
 
 class index(AuthoringMethodMixin,BasicFilterView):
     """
@@ -175,7 +185,9 @@ class index(AuthoringMethodMixin,BasicFilterView):
         return AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,group=namespace_info['authoring_group'],latest=True)
                                            &
                                            (Q(status=AuthoredData.UPDATE) | Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))). \
-            prefetch_related('identifier','group','user','author_view')
+            prefetch_related('identifier','group','user','author_view').prefetch_related('top_level_iobject',
+                                                                                         'top_level_iobject__identifier',
+                                                                                         'top_level_iobject__identifier__namespace')
 
 
     list_actions = [('Take from owner', 'url.dingos_authoring.index.action.take', 0)]
@@ -468,7 +480,6 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                     messages.success(self.request,"Imported objects: %s" % ", ".join(map(lambda x: "%s:%s" % (x['identifier_namespace_uri'], x['identifier_uid']), list(result))))
 
                 else:
-                    result = scheduled_import.delay(importer,data['xml'])
                     identifier = Identifier.objects.create(name="%s" % uuid4())
                     authored_data = AuthoredData.objects.create(identifier = identifier,
                                                                 name = data.get('name',"Import of XML via GUI"),
@@ -478,8 +489,17 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                                                                 user = self.request.user,
                                                                 group = namespace_info['authoring_group'],
                                                                 timestamp = timezone.now(),
-                                                                processing_id = result.id,
                                                                 latest=True)
+
+                    result = scheduled_import.delay(importer=importer,
+                                                    xml=data['xml'],
+                                                    xml_import_obj=authored_data)
+
+                    authored_data.processing_id = result.id
+                    authored_data.save()
+
+
+
 
                     messages.info(self.request,'Import started.')
 

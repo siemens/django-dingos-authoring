@@ -54,6 +54,10 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                         Top-level object
                     </th>
 
+                    <th>
+                        Authoring Source
+                    </th>
+
 
                  </thead>
                 {% endblock %}
@@ -79,26 +83,16 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
                                 <td>
                                     {% if import_status == 'SUCCESS' %}
-
-                                        {% url 'url.dingos.view.infoobject' pk=obj.import_result.pk as the_url %}
+                                        {% url 'url.dingos.view.infoobject' pk=obj.top_level_iobject.pk as the_url %}
                                         {% if the_url %}
                                             <a href="{{ the_url }}"><img src="/static/admin/img/selector-search.gif" alt="Lookup" height="16" width="16"></a>
                                         {% endif %}
 
-                                     {{ obj.import_result.name }} ({{ obj.import_result.identifier_namespace_uri }}:{{ obj.import_result.identifier_uid }})
+                                     {{ obj.top_level_iobject.name }} ({{ obj.top_level_iobject.identifier.namespace.uri }}:{{ obj.top_level_iobject.identifier.uid }})
                                     {% endif %}
                             </td>
                             <td>
-                                {%  if obj.yielded_by  %}
-                                    {% url 'dingos_authoring.view.authored_object.history' id=obj.yielded_by.identifier as the_url %}
-                                    {% if the_url %}
-                                        <a href="{{ the_url }}"><img src="/static/admin/img/selector-search.gif" alt="Lookup" height="16" width="16">Source</a>
-                                    {% endif %}
-
-
-
-                                    {{  obj.yielded_by }}
-                                {% endif %}
+                                {% show_authoring_source obj %}
                             </td>
 
 

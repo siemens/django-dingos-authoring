@@ -37,6 +37,15 @@ def show_imported_top_level_object(obj):
     return {'obj':obj}
 
 
+@register.inclusion_tag('dingos_authoring/%s/includes/_AuthoringSourceDisplay.html'% DINGOS_TEMPLATE_FAMILY)
+def show_authoring_source(obj):
+    try:
+        yielded_by = obj.yielded_by
+    except:
+        yielded_by = None
+
+    return {'yielded_by':yielded_by}
+
 @register.inclusion_tag('dingos_authoring/%s/includes/_AuthoringNamespacesDisplay.html'% DINGOS_TEMPLATE_FAMILY,takes_context=True)
 def show_AuthoringNamespaces(context):
     namespace_info = context['view'].namespace_info #AuthoringMethodMixin.get_authoring_namespaces(context['view'].request.user,

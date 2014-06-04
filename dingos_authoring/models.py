@@ -26,7 +26,7 @@ from django.contrib.auth.models import User, Group
 
 from dingos.models import IdentifierNameSpace, InfoObject
 
-from .tasks import scheduled_import
+
 
 import dingos_authoring.read_settings
 
@@ -163,19 +163,32 @@ class AuthoredData(models.Model):
                                    null=True,
                                    related_name="yielded_by")
 
+    yielded_iobjects = models.ManyToManyField(InfoObject,
+                                              related_name = 'yielded_by')
+
+    top_level_iobject = models.ForeignKey(InfoObject,
+                                          null=True,
+                                          related_name = 'top_level_of')
+
     @property
     def import_status(self):
         if self.processing_id:
-            result = scheduled_import.AsyncResult(self.processing_id)
+            import dingos_authoring.tasks as our_tasks
+            result = our_tasks.scheduled_import.AsyncResult(self.processing_id)
             if result:
                 return result.status
             else:
                 return 'n/a'
 
     @property
-    def import_result(self):
+    def _import_result_SUPERSEDED(self):
+        """
+        This method is not used anymore, since imports now fill in
+        the top-level object automatically  into the 'top_level_iobject' attribute.
+        """
         if self.processing_id:
-            result = scheduled_import.AsyncResult(self.processing_id)
+            import dingos_authoring.tasks as our_tasks
+            result = our_tasks.scheduled_import.AsyncResult(self.processing_id)
             if result.status == 'SUCCESS':
                 try:
                     list_of_objects = result.get(timeout=1)
@@ -323,9 +336,5 @@ class AuthoredData(models.Model):
 
 
 
-
-class InfoObject2AuthoredData(models.Model):
-    iobject = models.OneToOneField(InfoObject,related_name = 'created_from_thru')
-    authored_data = models.OneToOneField(AuthoredData)
 
 

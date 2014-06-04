@@ -71,34 +71,38 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                     {% for obj in object_list %}
 
 
-                        <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}">
-                            <td> {%  if obj.latest %}
+                        <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}" >
+                            <td {% highlight_if_equal obj.pk highlight_pk %}> {%  if obj.latest %}
                                      X
                                  {% endif %}
                             </td>
-                            <td> {% if obj.user %}
+                            <td {% highlight_if_equal obj.pk highlight_pk %}> {% if obj.user %}
                                     {{  obj.user| nice_name }}
                                  {% endif %}
                             </td>
-                            <td>
+                            <td {% highlight_if_equal obj.pk highlight_pk %}>
                                 {{  obj.get_status_display }} {% show_imported_top_level_object obj %}
                             </td>
-                            <td>
+                            <td {% highlight_if_equal obj.pk highlight_pk %}>
                                 {{  obj.get_kind_display }}
                             </td>
 
-                            <td>
+                            <td {% highlight_if_equal obj.pk highlight_pk %}>
                                 {{ obj.timestamp }}
                             </td>
-                            <td>
+                            <td {% highlight_if_equal obj.pk highlight_pk %}>
                                 {%  if obj.latest %}
+                                    {%url obj.author_view.name as the_url %}
+                                    {% if the_url %}
                                     {% if obj.user == view.request.user or obj.user == None%}
-                                    <a class="grp-button" href="{%url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }}">EDIT</a>
+                                    <a class="grp-button" href="{{ the_url }}?load={{ obj.identifier.name | urlencode }}">EDIT</a>
+                                    {% endif %}
                                     {% endif %}
                                 {%  endif %}
 
 
                             </td>
+
                         </tr>
                     {% endfor %}
                   </tbody>
