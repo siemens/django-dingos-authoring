@@ -15,17 +15,14 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-
 from django import template
-from django.utils.html import strip_tags
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.urlresolvers import reverse
-
-from django.utils.html import conditional_escape
+from django.utils.html import conditional_escape, strip_tags
 from django.utils.safestring import mark_safe
-from dingos.models import BlobStorage
 
 from dingos import DINGOS_TEMPLATE_FAMILY
+from dingos.models import BlobStorage
 
 from dingos_authoring.view_classes import AuthoringMethodMixin
 

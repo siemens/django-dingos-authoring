@@ -15,23 +15,16 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-import json
+import json, logging, traceback
 
 from dingos.view_classes import BasicView
-
-from .models import AuthoredData, GroupNamespaceMap, UserAuthoringInfo
-
-from django.http import HttpResponse, HttpResponseRedirect
-
 from django.core.exceptions import ObjectDoesNotExist
-
+from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 
+from .models import AuthoredData, GroupNamespaceMap, UserAuthoringInfo
 from .tasks import scheduled_import
-
-import logging
-
-import traceback
+                                
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +33,6 @@ class AuthoringMethodMixin(object):
     We use this Mixin to enrich view with methods that are required
     by several authoring views.
     """
-
 
     @staticmethod
     def get_authoring_namespaces(user,fail_silently=True):
@@ -110,8 +102,9 @@ class AuthoringMethodMixin(object):
             return self._namespace_info
 
 
-class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
+
+class BasicProcessingView(AuthoringMethodMixin,BasicView):
     importer_class = None
     author_view = None
     transformer = None

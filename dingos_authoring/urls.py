@@ -15,20 +15,33 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-
-
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.conf.urls.static import static
 from os import path
 
 from . import views
 
 
-urlpatterns = patterns('dingos_authoring.views',
-                       url(r'^$', views.index.as_view(), name = "dingos_authoring.index"),
-                       url(r'^History$', views.index.as_view(), name = "dingos_authoring.index"),
-                       url(r'^History/(?P<pk>\d*)/$',
-                           views.index.as_view(),
-                           name = "dingos_authoring.view.authored_object.history"),
-                       url(r'^Imports$', views.ImportsView.as_view(), name = "dingos_authoring.imports")
-                       )
+urlpatterns = [
+    url(r'^$', views.index.as_view(), name="url.dingos_authoring.index"),
+
+    url(r'^History$', views.index.as_view(), name="url.dingos_authoring.index"),
+    url(r'^History/(?P<id>[^/]*)/$', views.AuthoredDataHistoryView.as_view(), name="url.dingos_authoring.view.authored_object.history"),
+
+    
+    # The XML import page
+    url(r'^XMLImport/$', views.XMLImportView.as_view(), name= "dingos_authoring.action.xml_import"),
+
+    url(r'^Imports$', views.ImportsView.as_view(), name="url.dingos_authoring.imports"),
+    url(r'^Action/_take_reports$', views.TakeReportView.as_view(), name="url.dingos_authoring.index.action.take"),
+
+
+    # Cross-authoring-app functionality
+    url(r'load$', views.GetDraftJSON.as_view(), name="url.dingos_authoring.load_json"),
+    url(r'ref$', views.GetAuthoringObjectReference.as_view(), name="url.dingos_authoring.ref"),
+    url(r'upload$', views.UploadFile.as_view(), name="url.dingos_authoring.upload_file"),
+    url(r'get_namespace$', views.GetAuthoringNamespace.as_view(), name="url.dingos_authoring.get_namespace"),
+    url(r'validate_object$', views.ValidateObject.as_view(), name="url.dingos_authoring.validate_object"),
+    url(r'similar_object$', views.GetAuthoringSimilarObjects.as_view(), name="url.dingos_authoring.similar_object"),
+]
+

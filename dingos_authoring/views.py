@@ -15,71 +15,46 @@
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-import json, collections, logging, traceback, re
-
+import sys, re, traceback, json, collections, logging, libxml2, importlib, pkgutil, hashlib
 from uuid import uuid4
-
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
-from django.shortcuts import render_to_response
-from django.template import RequestContext
-from django.http import HttpResponse, HttpResponseRedirect
-
-from dingos.models import InfoObject, InfoObject2Fact
-from django.db.models import Q
-from django.utils import timezone
+from lxml import etree
+from base64 import b64encode
+from operator import itemgetter
+from querystring_parser import parser
 
 from django.contrib import messages
-
 from django.contrib.auth.models import User, Group
-from mantis_authoring.utilities import name_cybox_obj, find_similar_cybox_obj
-
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.db.models import Q
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render_to_response
+from django.template import RequestContext
+from django.utils import timezone
+from django.views.generic import View
+from django.views.generic.edit import FormView
 
 from braces.views import LoginRequiredMixin, SuperuserRequiredMixin
 
-from dingos.core.utilities import lookup_in_re_list
 from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
+from dingos.core.utilities import lookup_in_re_list
+from dingos.importer import Generic_XML_Import
+from dingos.models import InfoObject, InfoObject2Fact
 from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicFilterView, BasicListActionView
 
-
-
-from dingos.importer import Generic_XML_Import
-from querystring_parser import parser
-
-
-from .models import GroupNamespaceMap, AuthoredData, Identifier
-
-from .filter import ImportFilter, AuthoringObjectFilter
-
-
-from django.views.generic import View
-
-
-
-from .view_classes import AuthoringMethodMixin
-
-import libxml2
-from lxml import etree
-from base64 import b64encode
-
-from . import DINGOS_AUTHORING_IMPORTER_REGISTRY
+from mantis_authoring.utilities import name_cybox_obj, find_similar_cybox_obj
 
 from forms import XMLImportForm
-
 import forms as observables
-from operator import itemgetter
-import hashlib
 
-import sys
+from . import DINGOS_AUTHORING_IMPORTER_REGISTRY
+from .filter import ImportFilter, AuthoringObjectFilter
+from .models import GroupNamespaceMap, AuthoredData, Identifier
+from .view_classes import AuthoringMethodMixin
 
-import pkgutil
 
-from django.db.models import Q
 
 
 logger = logging.getLogger(__name__)
-
-import importlib
 
 AUTHORING_IMPORTER_REGISTRY = []
 
@@ -102,6 +77,8 @@ add = celery_app.tasks['dingos_authoring.tasks.add']
 scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
 
 
+
+
 class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
     """
     Overview of history of an Authoring object.
@@ -120,7 +97,6 @@ class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
 
     @property
     def queryset(self):
-
         namespace_info = self.namespace_info
 
         if not namespace_info:
@@ -140,12 +116,12 @@ class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
                                                                                          'top_level_iobject__identifier__namespace')
 
     def get_context_data(self, **kwargs):
-
         context = super(AuthoredDataHistoryView, self).get_context_data(**kwargs)
-
         context['highlight_pk'] = self.request.GET.get('highlight',None)
-
         return context
+
+
+
 
 class index(AuthoringMethodMixin,BasicFilterView):
     """
@@ -156,21 +132,17 @@ class index(AuthoringMethodMixin,BasicFilterView):
 
     @property
     def title(self):
-
         if self.namespace_info:
             return "Drafts and Imports of Authoring Group %s" % self.namespace_info['authoring_group']
         else:
             return "No drafts or imports to be shown (user not member of an authoring group)"
 
     template_name = 'dingos_authoring/%s/AuthoredObjectList.html' % DINGOS_TEMPLATE_FAMILY
-
     filterset_class = AuthoringObjectFilter
 
 
     @property
     def queryset(self):
-
-
         namespace_info = self.namespace_info
 
         if not namespace_info:
@@ -189,8 +161,8 @@ class index(AuthoringMethodMixin,BasicFilterView):
                                                                                          'top_level_iobject__identifier',
                                                                                          'top_level_iobject__identifier__namespace')
 
-
     list_actions = [('Take from owner', 'url.dingos_authoring.index.action.take', 0)]
+
 
 
 
@@ -213,6 +185,8 @@ class ImportsView(BasicFilterView):
         return AuthoredData.objects.filter(
                                            user=self.request.user,
                                            status=AuthoredData.IMPORTED)
+
+
 
 
 
@@ -394,18 +368,16 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                 json_obj = AuthoredData.object_copy(json_obj,user=self.request.user,status=status)
                 print "JSON obj %s with user %s" % (json_obj,json_obj.user)
 
-
             res['data'] = {}
             res['data']['jsn'] = json_obj.data
             res['data']['name'] = json_obj.name
             res['data']['id'] = json_obj.identifier.name
             res['status'] = True
             res['msg'] = 'Loaded \'' + json_obj.name + '\''
-            #except:
-            #    res['status'] = False
-            #    res['msg'] = 'Something went wrong; could not load report.'
 
         return res
+
+
 
 
 class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateView):
@@ -466,13 +438,9 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
             if not importer_class:
                 messages.error(self.request,"Do not know how to import XML with namespace '%s'" % (namespace))
             else:
-
-
-
                 importer = importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'],
                                                default_identifier_ns_uri=namespace_info['default_ns_uri'],
                                                substitute_unallowed_namespaces=True)
-
 
                 if False: # Celery switched off
                     result = importer.xml_import(xml_content = data['xml'],
@@ -504,10 +472,6 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                     messages.info(self.request,'Import started.')
 
                 self.form = XMLImportForm()
-
-
-
-
 
         return super(XMLImportView,self).get(request, *args, **kwargs)
 
@@ -747,41 +711,6 @@ class GetAuthoringNamespace(BasicJSONView, AuthoringMethodMixin):
         return res
 
 
-
-# class ValidateObject(BasicJSONView, AuthoringMethodMixin):
-#     """
-#     Validates an object passed from the GUI. 
-#     """
-#     @property
-#     def returned_obj(self):
-#         res = {
-#             'status': False,
-#             'msg': 'An error occured validating the object.',
-#             'data': None
-#         }
-
-#         POST = self.request.POST
-#         post_dict = parser.parse(POST.urlencode())
-
-#         observable_properties = post_dict.get('observable_properties', {})
-#         object_type = observable_properties.get('object_type', None)
-#         object_subtype = observable_properties.get('object_subtype', 'Default')
-
-#         try:
-#             im = importlib.import_module('mantis_authoring.cybox_object_transformers.' + object_type.lower())
-#             template_obj = getattr(im,'TEMPLATE_%s' % object_subtype)()
-#             obs_form_valid = template_obj.validate_form(observable_properties)
-
-            
-
-
-#         except Exception as e:
-#             print e
-
-#         return res
-
-
-from django.views.generic.edit import FormView
 class ValidateObject(FormView):
 
     def errors_to_json(self, errors):
