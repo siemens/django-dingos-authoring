@@ -776,6 +776,38 @@ class ValidateObject(FormView):
 
 
 
+class GetObjectName(BasicJSONView):
+    """
+    View serving the name of a passed cybox object
+    """
+    @property
+    def returned_obj(self):
+        res = {
+            'status': False,
+            'msg': 'An error occurred building the name',
+            'data': ''
+        }
+        POST = self.request.POST
+        post_dict = parser.parse(POST.urlencode())
+
+        object_element = post_dict.get('observable_properties', {})
+        object_type = object_element.get('object_type', '').lower().strip()
+        object_subtype = object_element.get('object_subtype', 'Default')
+
+        try:
+            im = importlib.import_module('mantis_authoring.cybox_object_transformers.' + object_type)
+            template_obj = getattr(im,'TEMPLATE_%s' % object_subtype)()
+            cybox_xml = template_obj.process_form(object_element).to_xml()
+            res['data'] = name_cybox_obj(cybox_xml)
+            res['status'] = True
+        except Exception as e:
+            raise e
+            res['msg'] = str(e)
+        
+        return res
+
+
+
 class CeleryTest(SuperuserRequiredMixin,BasicJSONView):
     @property
     def returned_obj(self):

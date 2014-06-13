@@ -37,11 +37,12 @@ urlpatterns = [
 
 
     # Cross-authoring-app functionality
-    url(r'load$', views.GetDraftJSON.as_view(), name="url.dingos_authoring.load_json"),
-    url(r'ref$', views.GetAuthoringObjectReference.as_view(), name="url.dingos_authoring.ref"),
-    url(r'upload$', views.UploadFile.as_view(), name="url.dingos_authoring.upload_file"),
-    url(r'get_namespace$', views.GetAuthoringNamespace.as_view(), name="url.dingos_authoring.get_namespace"),
-    url(r'validate_object$', views.ValidateObject.as_view(), name="url.dingos_authoring.validate_object"),
-    url(r'similar_object$', views.GetAuthoringSimilarObjects.as_view(), name="url.dingos_authoring.similar_object"),
+    url(r'/load$', views.GetDraftJSON.as_view(), name="url.dingos_authoring.load_json"),
+    url(r'/ref$', views.GetAuthoringObjectReference.as_view(), name="url.dingos_authoring.ref"),
+    url(r'/upload$', views.UploadFile.as_view(), name="url.dingos_authoring.upload_file"),
+    url(r'/get_namespace$', views.GetAuthoringNamespace.as_view(), name="url.dingos_authoring.get_namespace"),
+    url(r'/validate_object$', views.ValidateObject.as_view(), name="url.dingos_authoring.validate_object"),
+    url(r'/get_object_name$', views.GetObjectName.as_view(), name="url.dingos_authoring.get_object_name"),
+    url(r'/similar_object$', views.GetAuthoringSimilarObjects.as_view(), name="url.dingos_authoring.similar_object"),
 ]
 
