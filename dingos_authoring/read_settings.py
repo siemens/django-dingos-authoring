@@ -22,3 +22,7 @@ import dingos_authoring
 
 if settings.configured and 'DINGOS_AUTHORING' in dir(settings):
     dingos_authoring.DINGOS_AUTHORING_IMPORTER_REGISTRY = settings.DINGOS_AUTHORING.get('IMPORTER_REGISTRY', dingos_authoring.DINGOS_AUTHORING_IMPORTER_REGISTRY)
+
+if settings.configured and 'DINGOS_AUTHORING' in dir(settings):
+    dingos_authoring.DINGOS_AUTHORING_CELERY_BUG_WORKAROUND = settings.DINGOS_AUTHORING.get('CELERY_BUG_WORKAROUND', dingos_authoring.DINGOS_AUTHORING_CELERY_BUG_WORKAROUND)
+

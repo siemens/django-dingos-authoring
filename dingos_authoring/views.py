@@ -45,7 +45,8 @@ from mantis_authoring.utilities import name_cybox_obj, find_similar_cybox_obj
 from forms import XMLImportForm
 import forms as observables
 
-from . import DINGOS_AUTHORING_IMPORTER_REGISTRY
+from . import DINGOS_AUTHORING_IMPORTER_REGISTRY, DINGOS_AUTHORING_CELERY_BUG_WORKAROUND
+
 from .filter import ImportFilter, AuthoringObjectFilter
 from .models import GroupNamespaceMap, AuthoredData, Identifier
 from .view_classes import AuthoringMethodMixin
@@ -70,12 +71,20 @@ for (matcher,module,class_name) in DINGOS_AUTHORING_IMPORTER_REGISTRY:
 # So we prune the required tasks from the app object defined in mantis.celery
 # until the issue is resolved
 
-from mantis.celery import app as celery_app
 
-add = celery_app.tasks['dingos_authoring.tasks.add']
-scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
+if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
+    # This is an ugly hack which breaks the independence of the django-dingos-authoring
+    # app from the top-level configuration.
+    # The hack may be required in instances where the celery tasks defined in Django
+    # are not instantiated correctly: we have a system on which the configuration of
+    # celery as seen when starting the worker is perfectly ok, yet within Django,
+    # the tasks are not assigned the correct backend.
+    from mantis.celery import app as celery_app
 
-
+    add = celery_app.tasks['dingos_authoring.tasks.add']
+    scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
+else:
+    from .tasks import add,scheduled_import
 
 
 class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
