@@ -37,20 +37,18 @@ setup(
     include_package_data=True,
     install_requires=[
         'django-dingos>=0.2.0',
+
     ],
-    license="BSD",
+    license="GPLv2+",
     zip_safe=False,
     keywords='django-dingos-authoring',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Framework :: Django',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
+        'Topic :: Security',
     ],
 )

@@ -23,7 +23,33 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 
 from .models import AuthoredData, GroupNamespaceMap, UserAuthoringInfo
-from .tasks import scheduled_import
+
+from . import DINGOS_AUTHORING_CELERY_BUG_WORKAROUND
+
+# Ordinarily, the celery tasks used here should be imported like so::
+#    from .tasks import add, scheduled_import
+# There is however, at least one installation, where this does not work:
+# the task returned via this import does not have set the
+# right results backend.
+# So we prune the required tasks from the app object defined in mantis.celery
+# until the issue is resolved
+
+
+if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
+    # This is an ugly hack which breaks the independence of the django-dingos-authoring
+    # app from the top-level configuration.
+    # The hack may be required in instances where the celery tasks defined in Django
+    # are not instantiated correctly: we have a system on which the configuration of
+    # celery as seen when starting the worker is perfectly ok, yet within Django,
+    # the tasks are not assigned the correct backend.
+    from mantis.celery import app as celery_app
+
+    print celery_app.tasks
+    #scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
+else:
+    from .tasks import scheduled_import
+
+
                                 
 
 logger = logging.getLogger(__name__)
@@ -222,7 +248,9 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                                                     author_view=None,
                                                                     data = res['xml'])
 
-                        result = scheduled_import.delay(importer=importer,
+
+                        #result = scheduled_import.delay(importer=importer,
+                        result = celery_app.tasks['dingos_authoring.tasks.scheduled_import'].delay(importer=importer,
                                                         xml=res['xml'],
                                                         xml_import_obj=xml_import_obj)
 

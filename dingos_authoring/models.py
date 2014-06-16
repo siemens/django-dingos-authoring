@@ -180,6 +180,9 @@ class AuthoredData(models.Model):
             else:
                 return 'n/a'
 
+        else:
+            return 'n/a'
+
     @property
     def _import_result_SUPERSEDED(self):
         """

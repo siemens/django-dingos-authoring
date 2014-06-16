@@ -17,10 +17,9 @@
 
 import sys, re, traceback, json, collections, logging, libxml2, importlib, pkgutil, hashlib
 from uuid import uuid4
-from lxml import etree
 from base64 import b64encode
 from operator import itemgetter
-from querystring_parser import parser
+
 
 from django.contrib import messages
 from django.contrib.auth.models import User, Group
@@ -81,11 +80,13 @@ if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
     # the tasks are not assigned the correct backend.
     from mantis.celery import app as celery_app
 
-    add = celery_app.tasks['dingos_authoring.tasks.add']
-    scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
+    #add = celery_app.tasks['dingos_authoring.tasks.add']
+    #scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
 else:
     from .tasks import add,scheduled_import
-
+    celery_app = {'dingos_authoring.tasks.add':add,
+                  'dingos_authoring.tasks.scheduled_import':scheduled_import
+                  }
 
 class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
     """
@@ -190,9 +191,12 @@ class ImportsView(BasicFilterView):
 
     @property
     def queryset(self):
-        return AuthoredData.objects.filter(
+        queryset = AuthoredData.objects.filter(
                                            user=self.request.user,
                                            status=AuthoredData.IMPORTED)
+
+        print queryset[0].import_status
+        return queryset
 
 
 
@@ -352,7 +356,7 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                                                                 timestamp = timezone.now(),
                                                                 latest=True)
 
-                    result = scheduled_import.delay(importer=importer,
+                    result = celery_app['dingos_authoring.tasks.scheduled_import'].delay(importer=importer,
                                                     xml=data['xml'],
                                                     xml_import_obj=authored_data)
 
@@ -471,7 +475,7 @@ class CeleryTest(SuperuserRequiredMixin,BasicJSONView):
         #        "%s" % add.backend,
         #        map(lambda x: ("%s" % app.tasks[x], "%s" % app.tasks[x].backend), app.tasks)]
 
-        result = add.delay(2,2)
+        result = celery_app['dingos_authoring.tasks.add'].delay(2,2)
 
         status0 = result.status
         value1 = result.get(timeout=1)
