@@ -43,5 +43,7 @@ urlpatterns = [
     url(r'^get_namespace$', views.GetAuthoringNamespace.as_view(), name="url.dingos_authoring.get_namespace"),
     url(r'/get_namespace$', views.GetAuthoringNamespace.as_view(), name="url.dingos_authoring.get_namespace"),
 
+    url(r'Test/Celery', views.CeleryTest.as_view())
+
 ]
 

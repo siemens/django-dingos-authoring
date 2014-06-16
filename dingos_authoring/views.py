@@ -21,6 +21,8 @@ from base64 import b64encode
 from operator import itemgetter
 
 
+from . import tasks
+
 from django.contrib import messages
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -51,6 +53,9 @@ from .models import GroupNamespaceMap, AuthoredData, Identifier
 from .view_classes import AuthoringMethodMixin
 
 
+class FakeCeleryApp(object):
+    def __init__(self,*args,**kwargs):
+        self.tasks = kwargs['tasks']
 
 
 logger = logging.getLogger(__name__)
@@ -62,14 +67,6 @@ for (matcher,module,class_name) in DINGOS_AUTHORING_IMPORTER_REGISTRY:
     AUTHORING_IMPORTER_REGISTRY.append((matcher,getattr(my_module,class_name)))
 
 
-# Ordinarily, the celery tasks used here should be imported like so::
-#    from .tasks import add, scheduled_import
-# There is however, at least one installation, where this does not work:
-# the task returned via this import does not have set the
-# right results backend.
-# So we prune the required tasks from the app object defined in mantis.celery
-# until the issue is resolved
-
 
 if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
     # This is an ugly hack which breaks the independence of the django-dingos-authoring
@@ -79,14 +76,19 @@ if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
     # celery as seen when starting the worker is perfectly ok, yet within Django,
     # the tasks are not assigned the correct backend.
     from mantis.celery import app as celery_app
+    print celery_app
+
+    #tasks = celery_app.tasks
 
     #add = celery_app.tasks['dingos_authoring.tasks.add']
     #scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
 else:
     from .tasks import add,scheduled_import
-    celery_app = {'dingos_authoring.tasks.add':add,
-                  'dingos_authoring.tasks.scheduled_import':scheduled_import
-                  }
+    fake_tasks = {'dingos_authoring.tasks.add':add,
+             'dingos_authoring.tasks.scheduled_import':scheduled_import
+            }
+
+    celery_app = FakeCeleryApp(tasks=fake_tasks)
 
 class AuthoredDataHistoryView(AuthoringMethodMixin,BasicListView):
     """
@@ -356,7 +358,7 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                                                                 timestamp = timezone.now(),
                                                                 latest=True)
 
-                    result = celery_app['dingos_authoring.tasks.scheduled_import'].delay(importer=importer,
+                    result = celery_app.tasks['dingos_authoring.tasks.scheduled_import'].delay(importer=importer,
                                                     xml=data['xml'],
                                                     xml_import_obj=authored_data)
 
@@ -462,30 +464,31 @@ class GetAuthoringNamespace(BasicJSONView, AuthoringMethodMixin):
 
 
 
-class CeleryTest(SuperuserRequiredMixin,BasicJSONView):
-    @property
-    def returned_obj(self):
+class CeleryTest(SuperuserRequiredMixin,BasicTemplateView):
+    """
+    View for editing the saved searches of a user.
+    """
 
+    template_name = 'dingos_authoring/%s/tests/CeleryTest.html' % DINGOS_TEMPLATE_FAMILY
+    title = 'Test of Celery'
 
+    def get_context_data(self, **kwargs):
+        context = super(CeleryTest, self).get_context_data(**kwargs)
+        #print celery_app.tasks
+        #result = celery_app.tasks['dingos_authoring.tasks.add'].delay(2,2)
 
-        #from mantis.celery import app
+        from mantis.celery import app as celery_app
+        print celery_app
+        #result = celery_app.tasks['dingos_authoring.tasks.add'].delay(2,2)
 
-        #return ["%s" % app.backend,
-        #        "%s" % add,
-        #        "%s" % add.backend,
-        #        map(lambda x: ("%s" % app.tasks[x], "%s" % app.tasks[x].backend), app.tasks)]
-
-        result = celery_app['dingos_authoring.tasks.add'].delay(2,2)
+        result = tasks.add.delay(2,2)
 
         status0 = result.status
         value1 = result.get(timeout=1)
         status1 = result.status
 
-        return [('sid',result.id),
-                ('backend',"%s" % add.backend),
-                ('name',add.name),
-                ('status0',status0),
-                ('value1',value1),
-                ('status1',status1),
+        context['status0'] = result.status
+        context['value'] = result.get(timeout=1)
+        context['status1'] = result.status
+        return context
 
-                ]

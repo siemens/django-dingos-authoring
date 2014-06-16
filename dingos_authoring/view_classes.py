@@ -44,11 +44,12 @@ if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
     # the tasks are not assigned the correct backend.
     from mantis.celery import app as celery_app
 
-    print celery_app.tasks
+
     #scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
 else:
     from .tasks import scheduled_import
 
+    tasks = {'dingos_authoring.tasks.scheduled_import' : scheduled_import}
 
                                 
 
