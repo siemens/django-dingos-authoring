@@ -360,18 +360,8 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
                                                                 timestamp = timezone.now(),
                                                                 latest=True)
 
-                    if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
-                        # This is an ugly hack which breaks the independence of the django-dingos-authoring
-                        # app from the top-level configuration.
-                        # The hack may be required in instances where the celery tasks defined in Django
-                        # are not instantiated correctly: we have a system on which the configuration of
-                        # celery as seen when starting the worker is perfectly ok, yet within Django,
-                        # the tasks are not assigned the correct backend.
-                        from mantis.celery import app as celery_app
 
-
-                    from . import tasks as our_tasks
-                    result = our_tasks.scheduled_import.delay(importer=importer,
+                    result = tasks.scheduled_import.delay(importer=importer,
                                                     xml=data['xml'],
                                                     xml_import_obj=authored_data)
 
@@ -501,9 +491,8 @@ class CeleryTest(SuperuserRequiredMixin,BasicTemplateView):
             # the tasks are not assigned the correct backend.
             from mantis.celery import app as celery_app
 
-        from . import tasks as our_tasks
 
-        result = our_tasks.add.delay(2,2)
+        result = tasks.add.delay(2,2)
 
         status0 = result.status
         value1 = result.get(timeout=1)

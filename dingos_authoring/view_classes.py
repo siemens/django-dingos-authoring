@@ -262,8 +262,8 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                             from mantis.celery import app as celery_app
 
 
-                        from . import tasks as our_tasks
-                        result = our_tasks.scheduled_import.delay(importer=importer,
+
+                        result = tasks.scheduled_import.delay(importer=importer,
                                                         xml=res['xml'],
                                                         xml_import_obj=xml_import_obj)
 
