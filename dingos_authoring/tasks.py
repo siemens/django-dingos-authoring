@@ -36,14 +36,13 @@ def scheduled_import(importer,
     created_objects = list(InfoObject.objects.filter(pk__in=created_object_ids))
 
 
-
     for object in created_objects:
         name = object.set_name()
 
     xml_import_obj.yielded_iobjects.add(*created_objects)
 
     try:
-        top_level_iobject = created_objects[-1]
+        top_level_iobject = InfoObject.objects.get(pk=created_object_ids[-1])
     except:
         top_level_iobject = None
 
