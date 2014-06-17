@@ -65,7 +65,7 @@ def show_AuthoringNamespaces(context):
         allowed_uris = sorted(list(allowed_uris))
 
     result =  {'current_group':current_group,
-               'allowed_ns_uris' : allowed_uris,
+               'allowed_ns_uris' : set([namespace_uri] + allowed_uris),
                'default_ns_uri' : namespace_uri,
                'error_msg': error_msg}
 

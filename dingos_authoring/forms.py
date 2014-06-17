@@ -30,6 +30,9 @@ class XMLImportForm(forms.Form):
                            max_length=256,
                            widget=widgets.TextInput(attrs={'size':'100','class':'vTextField'}))
     xml = forms.CharField(required=False,
+                          help_text = """ATTENTION: Make sure that the identifier namespaces occuring in the XML
+                                         are contained in your allowed namespaces (see display on right-hand side)!!! Otherwise, the created objects will be moved
+                                         into a temporary namespace!!!""",
                           widget=widgets.Textarea(attrs={'cols':100,'rows':10,'style': 'height:auto; width:100%;resize:vertical;min-height:150px;'}),
                           validators=[validate_xml])
 
