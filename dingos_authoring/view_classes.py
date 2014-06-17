@@ -26,6 +26,8 @@ from .models import AuthoredData, GroupNamespaceMap, UserAuthoringInfo
 
 from . import DINGOS_AUTHORING_CELERY_BUG_WORKAROUND
 
+from . import tasks
+
 # Ordinarily, the celery tasks used here should be imported like so::
 #    from .tasks import add, scheduled_import
 # There is however, at least one installation, where this does not work:
