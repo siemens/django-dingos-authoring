@@ -220,7 +220,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                     if submit_action == 'import':
                         self.importer_class.xml_import
 
-                        importer = self.importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'],
+                        importer = self.importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'] + [namespace_info['default_ns_uri']],
                                                             default_identifier_ns_uri=namespace_info['default_ns_uri'],
                                                             substitute_unallowed_namespaces=True)
 

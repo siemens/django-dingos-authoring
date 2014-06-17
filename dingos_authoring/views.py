@@ -338,7 +338,7 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
             if not importer_class:
                 messages.error(self.request,"Do not know how to import XML with namespace '%s'" % (namespace))
             else:
-                importer = importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'],
+                importer = importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'] + [namespace_info['default_ns_uri']],
                                                default_identifier_ns_uri=namespace_info['default_ns_uri'],
                                                substitute_unallowed_namespaces=True)
 
