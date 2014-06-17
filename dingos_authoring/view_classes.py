@@ -35,22 +35,6 @@ from . import DINGOS_AUTHORING_CELERY_BUG_WORKAROUND
 # until the issue is resolved
 
 
-if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
-    # This is an ugly hack which breaks the independence of the django-dingos-authoring
-    # app from the top-level configuration.
-    # The hack may be required in instances where the celery tasks defined in Django
-    # are not instantiated correctly: we have a system on which the configuration of
-    # celery as seen when starting the worker is perfectly ok, yet within Django,
-    # the tasks are not assigned the correct backend.
-    from mantis.celery import app as celery_app
-
-
-    #scheduled_import = celery_app.tasks['dingos_authoring.tasks.scheduled_import']
-else:
-    from .tasks import scheduled_import
-
-    tasks = {'dingos_authoring.tasks.scheduled_import' : scheduled_import}
-
                                 
 
 logger = logging.getLogger(__name__)
