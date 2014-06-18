@@ -32,7 +32,8 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
     {% if not view.form %}
         You are not member of an authoring group.
-    {% endif %}
+
+    {% else %}
 
         <form method="POST" xmlns="http://www.w3.org/1999/html">
         {% csrf_token %}
@@ -40,7 +41,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
             <input name="action" value="Select" type="submit" />
         </form>
-
+    {% endif %}
 {% endblock %}
 
 

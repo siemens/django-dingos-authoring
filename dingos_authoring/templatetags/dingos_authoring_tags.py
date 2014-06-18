@@ -50,7 +50,7 @@ def show_AuthoringNamespaces(context):
                                                     #                   fail_silently=True)
 
     current_group = None
-    allowed_uris = None
+    allowed_uris = []
     namespace_uri = None
     error_msg = "You are not member of an authoring group!"
 
