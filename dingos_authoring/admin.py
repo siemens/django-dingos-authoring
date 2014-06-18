@@ -50,6 +50,8 @@ from models import AuthoredData, GroupNamespaceMap, AuthorView
 
 
 
+
+
 #
 # Admin Interfaces
 # ----------------
@@ -67,6 +69,16 @@ from models import AuthoredData, GroupNamespaceMap, AuthorView
 #
 #
 
+class GroupNamespaceMapAdmin(admin.ModelAdmin):
+    list_display = ('group','default_namespace')
+    fields = ('group','default_namespace','allowed_namespaces')
+    raw_id_fields = ('default_namespace',)
+    autocomplete_lookup_fields = {
+        'fk': ['default_namespace'],
+
+    }
+
+
 
 #
 # Registration
@@ -77,8 +89,8 @@ from models import AuthoredData, GroupNamespaceMap, AuthorView
 
 
 
-admin.site.register(AuthoredData)
-admin.site.register(AuthorView)
-admin.site.register(GroupNamespaceMap)
+#admin.site.register(AuthoredData)
+#admin.site.register(AuthorView)
+admin.site.register(GroupNamespaceMap,GroupNamespaceMapAdmin)
 
 

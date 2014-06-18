@@ -65,11 +65,18 @@ class GroupNamespaceMap(models.Model):
 
     """
 
-    group = models.OneToOneField(Group,unique=True)
+    group = models.OneToOneField(Group,unique=True,
+                                 help_text='Group for which this mapping defines default namespace and allowed namespaces.')
 
-    default_namespace = models.ForeignKey(IdentifierNameSpace, related_name='authoring_default_for')
+    default_namespace = models.ForeignKey(IdentifierNameSpace,
+                                          help_text = 'Identifier namespace to be used when authoring new STIX/Cybox document.',
+                                          related_name='authoring_default_for')
 
-    allowed_namespaces = models.ManyToManyField(IdentifierNameSpace, related_name='authoring_allowed_for',blank=True)
+    allowed_namespaces = models.ManyToManyField(IdentifierNameSpace,
+                                                related_name='authoring_allowed_for',
+                                                blank=True,
+                                                help_text = 'List of identifier namespaces in which objects may be '
+                                                            'authored or imported by users of group.')
 
     def __unicode__(self):
         return "%s: %s" % (self.group,self.default_namespace.uri)
@@ -90,7 +97,14 @@ class GroupNamespaceMap(models.Model):
         return result
 
     def __unicode__(self):
+
+
         return "%s" % self.group
+
+
+    class Meta:
+        verbose_name = 'Group-2-Identifier-Namespace Mapping'
+        verbose_name_plural = 'Group-2-Identifier-Namespace Mappings'
 
 
 class UserAuthoringInfo(models.Model):

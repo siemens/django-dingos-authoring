@@ -141,8 +141,12 @@ class index(AuthoringMethodMixin,BasicFilterView):
 
     @property
     def title(self):
+        print self.namespace_info
         if self.namespace_info:
-            return "Drafts and Imports of Authoring Group %s" % self.namespace_info['authoring_group']
+            if isinstance(self.namespace_info,list):
+                return "No drafts or imports to be shown (no active authoring group selected)"
+            else:
+                return "Drafts and Imports of Authoring Group %s" % self.namespace_info['authoring_group']
         else:
             return "No drafts or imports to be shown (user not member of an authoring group)"
 
@@ -152,23 +156,26 @@ class index(AuthoringMethodMixin,BasicFilterView):
 
     @property
     def queryset(self):
+
         namespace_info = self.namespace_info
 
         if not namespace_info:
-            messages.error(self.request,'You are not member of an Authoring Group')
+            messages.error(self.request,'You are not member of an Authoring Group.')
             return AuthoredData.objects.exclude(pk__gt=-1)
+
         elif isinstance(namespace_info,list):
             messages.error(self.request,'You are member of several authoring groups but you have not selected an' \
-                                        ' active authoring group.')
-            return AuthoredData.objects.exclude(pk__gt=-1)
-
+                                        ' active authoring group. Please do so in the "Switch Authoring Group" dialogue'
+                                        ' available from the user menu (top right-hand corner).')
+            return  AuthoredData.objects.exclude(pk__gt=-1)
 
         return AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,group=namespace_info['authoring_group'],latest=True)
-                                           &
-                                           (Q(status=AuthoredData.UPDATE) | Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))). \
-            prefetch_related('identifier','group','user','author_view').prefetch_related('top_level_iobject',
-                                                                                         'top_level_iobject__identifier',
-                                                                                         'top_level_iobject__identifier__namespace')
+                                       &
+                                       (Q(status=AuthoredData.UPDATE) | Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))). \
+        prefetch_related('identifier','group','user','author_view').prefetch_related('top_level_iobject',
+                                                                                     'top_level_iobject__identifier',
+                                                                                     'top_level_iobject__identifier__namespace')
+
 
     list_actions = [('Take from owner', 'url.dingos_authoring.index.action.take', 0)]
 
@@ -387,6 +394,15 @@ class TakeReportView(AuthoringMethodMixin,BasicListActionView):
     # and inserting identifiers of objects that were not offered
     # by the view.
 
+
+    template_name = 'dingos_authoring/%s/actions/TakeAuthoringDataObject.html' % DINGOS_TEMPLATE_FAMILY
+
+    title = 'Take report(s) from owner'
+
+    description = "When taking a report from another user, you become its owner and thus the only person" \
+                  " allowed to edit the report. Make sure that you only take a report that is not currently" \
+                  " edited by its current owner!"
+
     @property
     def action_model_query(self):
         base_query = AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,
@@ -424,12 +440,7 @@ class TakeReportView(AuthoringMethodMixin,BasicListActionView):
                   'action_function': lambda x,y: self._take_authoring_data_obj(x,y)}]
 
 
-    title = 'Carry out actions on model instances'
 
-    description = """Provide here a brief description for the user of what to do -- this will be displayed
-                     in the view."""
-
-    template_name = 'dingos_authoring/%s/actions/TakeAuthoringDataObject.html' % DINGOS_TEMPLATE_FAMILY
 
 
 

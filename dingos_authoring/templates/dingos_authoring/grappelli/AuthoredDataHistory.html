@@ -46,7 +46,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                 {% block header_row %}
            	  <thead>
                     <tr>
-                    <th>Latest</th>
+
                     <th>
                         Owner
                     </th>
@@ -72,10 +72,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
                         <tr class="grp-row grp-row-{% cycle 'odd' 'even' %}" >
-                            <td {% highlight_if_equal obj.pk highlight_pk %}> {%  if obj.latest %}
-                                     X
-                                 {% endif %}
-                            </td>
+
                             <td {% highlight_if_equal obj.pk highlight_pk %}> {% if obj.user %}
                                     {{  obj.user| nice_name }}
                                  {% endif %}
