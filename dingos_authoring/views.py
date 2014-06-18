@@ -43,19 +43,16 @@ from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView,
 
 
 
-from forms import XMLImportForm
+from forms import XMLImportForm, SwitchAuthoringGroupForm
 import forms as observables
 
 from . import DINGOS_AUTHORING_IMPORTER_REGISTRY, DINGOS_AUTHORING_CELERY_BUG_WORKAROUND
 
 from .filter import ImportFilter, AuthoringObjectFilter
-from .models import GroupNamespaceMap, AuthoredData, Identifier
+from .models import GroupNamespaceMap, AuthoredData, Identifier, UserAuthoringInfo
 from .view_classes import AuthoringMethodMixin
 
 
-class FakeCeleryApp(object):
-    def __init__(self,*args,**kwargs):
-        self.tasks = kwargs['tasks']
 
 
 logger = logging.getLogger(__name__)
@@ -439,7 +436,7 @@ class TakeReportView(AuthoringMethodMixin,BasicListActionView):
 
 
 
-class GetAuthoringNamespace(BasicJSONView, AuthoringMethodMixin):
+class GetAuthoringNamespace(AuthoringMethodMixin, BasicJSONView):
     """
     View serving the namespace of the currently logged in user
     """
@@ -502,4 +499,68 @@ class CeleryTest(SuperuserRequiredMixin,BasicTemplateView):
         context['value'] = result.get(timeout=1)
         context['status1'] = result.status
         return context
+
+
+
+class SwitchAuthoringGroupView(AuthoringMethodMixin,BasicTemplateView):
+    """
+    View for editing the saved searches of a user.
+    """
+
+    template_name = 'dingos_authoring/%s/actions/SwitchAuthoringGroup.html' % DINGOS_TEMPLATE_FAMILY
+    title = 'Switch Authoring Group'
+
+    form = None
+
+    def build_form(self,*args):
+        ns_info = self.get_authoring_namespaces(self.request.user,return_available_groups=True)
+
+        if not ns_info:
+            # User has no authoring groups
+            return None
+        else:
+            group_choices = []
+
+            for (i,j) in ns_info['all_authoring_groups']:
+                group_choices.append((i,i))
+
+
+            if len(args) == 0:
+                # No values have been set; we set the initial value here
+                if 'authoring_group' in ns_info:
+                    default = ns_info['authoring_group']
+                else:
+                    default = ''
+                args = [{'group': default}]
+
+            self.form = SwitchAuthoringGroupForm(*args,
+                                                 group_choices=group_choices,
+                                                 initial = {'group': ''})
+
+    def get(self, request, *args, **kwargs):
+        self.build_form()
+
+        return super(SwitchAuthoringGroupView,self).get(request, *args, **kwargs)
+
+
+    def post(self, request, *args, **kwargs):
+        self.build_form(request.POST.dict())
+
+        if self.form and self.form.is_valid():
+            selected_group = self.form.cleaned_data['group']
+            if selected_group:
+                namespace_map = GroupNamespaceMap.objects.get(group__name=selected_group)
+
+                try:
+                    user_authoring_info = UserAuthoringInfo.objects.get(user=request.user)
+                    user_authoring_info.default_authoring_namespace_info=namespace_map
+                    user_authoring_info.save()
+                except ObjectDoesNotExist:
+                    UserAuthoringInfo.objects.create(user=request.user,
+                                                     default_authoring_namespace_info=namespace_map)
+                messages.success(request,"Authoring group switched.")
+            else:
+                messages.info(request,"Leaving settings unchanged.")
+
+        return super(SwitchAuthoringGroupView,self).get(request, *args, **kwargs)
 

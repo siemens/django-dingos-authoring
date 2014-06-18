@@ -34,6 +34,7 @@ urlpatterns = [
 
     url(r'^Imports$', views.ImportsView.as_view(), name="url.dingos_authoring.imports"),
     url(r'^Action/_take_reports$', views.TakeReportView.as_view(), name="url.dingos_authoring.index.action.take"),
+    url(r'^Action/SwitchAuthoringGroup$', views.SwitchAuthoringGroupView.as_view(), name="url.dingos_authoring.action.switch_authoring_group"),
 
 
     # Cross-authoring-app functionality

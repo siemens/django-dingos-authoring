@@ -36,3 +36,23 @@ class XMLImportForm(forms.Form):
                           widget=widgets.Textarea(attrs={'cols':100,'rows':10,'style': 'height:auto; width:100%;resize:vertical;min-height:150px;'}),
                           validators=[validate_xml])
 
+
+class SwitchAuthoringGroupForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        if 'group_choices' in kwargs:
+            group_choices = kwargs['group_choices'] + [('','---')]
+            del(kwargs['group_choices'])
+        else:
+            group_choices = []
+        if 'initial_group' in kwargs:
+            initial_group = kwargs['initial_group']
+            del(kwargs['initial_group'])
+        else:
+            initial_group = 'blah'
+
+
+        super(SwitchAuthoringGroupForm, self).__init__(*args, **kwargs)
+
+        self.fields['group'] = forms.ChoiceField(choices=group_choices,
+                                                 required=False
+                                                 )

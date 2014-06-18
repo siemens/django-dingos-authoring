@@ -48,31 +48,49 @@ class AuthoringMethodMixin(object):
     """
 
     @staticmethod
-    def get_authoring_namespaces(user,fail_silently=True):
+    def get_authoring_namespaces(user,fail_silently=True,return_available_groups=False):
+
+        namespace_infos = None
+
+        if return_available_groups:
+            namespace_infos = GroupNamespaceMap.get_authoring_namespace_info(user)
+
         # Is there a default authoring namespace for this user?
         try:
             user_authoring_info = UserAuthoringInfo.objects.get(user=user)
-            namespace_info = user_authoring_info.default_authoring_namespace_info
+            namespace_info_obj = user_authoring_info.default_authoring_namespace_info
+            # Make sure that the user is in the group associated with this namespace map!!!
+            # This is necessary to make sure that once a user has been removed from a group,
+            # the user cannot continue to work in the group's namespace
+            if user in namespace_info_obj.group.user_set.all():
+                namespace_info =  {'authoring_group' : namespace_info_obj.group,
+                                   'default':namespace_info_obj.default_namespace,
+                                   'allowed':namespace_info_obj.allowed_namespaces.all()}
+            else:
+                raise ObjectDoesNotExist
 
         except ObjectDoesNotExist:
 
             # No default exists. Let's see whether the user is associated
             # with any authoring group
-
-            namespace_infos = GroupNamespaceMap.get_authoring_namespace_info(user)
+            if not namespace_infos:
+                namespace_infos = GroupNamespaceMap.get_authoring_namespace_info(user)
 
 
             if len(namespace_infos.keys()) == 0:
                 # No authoring for this user; fail silently or complain
-                if fail_silently:
+                if fail_silently or return_available_groups:
                     return None
                 else:
                     raise StandardError("User not allowed to author data.")
             elif len(namespace_infos.keys()) > 1 :
                 # more than one group, but no default has been defined
                 # (see above). Therefore: silently fail or complain.
-                if fail_silently:
-                    return namespace_infos.items()
+                if fail_silently or return_available_groups:
+                    if return_available_groups:
+                        return {'all_authoring_groups' : namespace_infos.items()}
+                    else:
+                        return namespace_infos.items()
                 else:
                     raise StandardError("Current user is member of more than one authoring groups")
 
@@ -87,11 +105,13 @@ class AuthoringMethodMixin(object):
             namespace_slug = 'dingos_author'
 
         allowed_namespace_uris = map(lambda x: x.uri, namespace_info['allowed'])
-        return {'authoring_group': namespace_info['authoring_group'],
-                'default_ns_uri': namespace_uri,
-                'default_ns_slug': namespace_slug,
-                'allowed_ns_uris': allowed_namespace_uris}
-
+        result = {'authoring_group': namespace_info['authoring_group'],
+                  'default_ns_uri': namespace_uri,
+                  'default_ns_slug': namespace_slug,
+                  'allowed_ns_uris': allowed_namespace_uris}
+        if return_available_groups:
+            result['all_authoring_groups'] = namespace_infos.items()
+        return result
 
     # To make sure that a view does not have to call get_authoring_namespaces more than once,
     # we store the result of the namespace lookup in the following variable:
