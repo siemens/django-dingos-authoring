@@ -78,6 +78,10 @@ class GroupNamespaceMapAdmin(admin.ModelAdmin):
 
     }
 
+class AuthoredDataAdmin(admin.ModelAdmin):
+    list_display = ('identifier','timestamp','latest','kind','status','name','user','group')
+    fields = ('kind','status','author_view','identifier','processing_id','name','user','group','timestamp','latest','data')
+
 
 
 #
@@ -89,7 +93,7 @@ class GroupNamespaceMapAdmin(admin.ModelAdmin):
 
 
 
-#admin.site.register(AuthoredData)
+admin.site.register(AuthoredData,AuthoredDataAdmin)
 #admin.site.register(AuthorView)
 admin.site.register(GroupNamespaceMap,GroupNamespaceMapAdmin)
 
