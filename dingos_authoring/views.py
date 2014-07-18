@@ -141,7 +141,6 @@ class index(AuthoringMethodMixin,BasicFilterView):
 
     @property
     def title(self):
-        print self.namespace_info
         if self.namespace_info:
             if isinstance(self.namespace_info,list):
                 return "No drafts or imports to be shown (no active authoring group selected)"
@@ -202,7 +201,6 @@ class ImportsView(BasicFilterView):
                                            user=self.request.user,
                                            status=AuthoredData.IMPORTED)
 
-        print queryset[0].import_status
         return queryset
 
 
@@ -270,7 +268,6 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                 else:
                     status = json_obj.status
                 json_obj = AuthoredData.object_copy(json_obj,user=self.request.user,status=status)
-                print "JSON obj %s with user %s" % (json_obj,json_obj.user)
 
             res['data'] = {}
             res['data']['jsn'] = json_obj.data
