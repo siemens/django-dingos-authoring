@@ -222,16 +222,26 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
         }
 
         if 'list' in self.request.GET:
-            json_obj_l = AuthoredData.objects.filter(kind=AuthoredData.AUTHORING_JSON,
-                                                     user=self.request.user,
-                                                     group=authoring_group,
-                                                     status=AuthoredData.DRAFT,
-                                                     latest=True)
+            json_obj_l = AuthoredData.objects.filter(
+                kind = AuthoredData.AUTHORING_JSON,
+                user = self.request.user,
+                group = authoring_group,
+                status = AuthoredData.DRAFT,
+                latest = True
+            ).prefetch_related('identifier','group','user','author_view').prefetch_related('top_level_iobject',
+                                                                                           'top_level_iobject__identifier',
+                                                                                           'top_level_iobject__identifier__namespace')
+
+
             res['status'] = True
             res['msg'] = ''
             res['data'] = []
-            for el in json_obj_l:
-                res['data'].append({'id': el.identifier.name, 'name': el.name})
+            for el in json_obj_l:                
+                res['data'].append({
+                    'id': el.identifier.name, 
+                    'name': el.name,
+                    'date': el.timestamp.strftime("%Y-%m-%d %H:%M")
+                })
 
         else:
             name = self.request.GET.get('name',False)
