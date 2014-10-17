@@ -22,6 +22,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 
+
+
+
+from lxml import etree
+
+
 from .models import AuthoredData, GroupNamespaceMap, UserAuthoringInfo
 
 from . import DINGOS_AUTHORING_CELERY_BUG_WORKAROUND
@@ -228,13 +234,30 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                          namespace_slug=namespace_info['default_ns_slug'],)
                     stix = t.getStix()
 
-                    if not stix:
+                    # Unfortunately, the transformer might return invalid XML
+                    # We cannot check for schema-correctness, but at least for
+                    # whether the XML can actually be parsed.
+
+                    malformed_xml_warning = ''
+                    try:
+                        etree.fromstring(stix)
+                    except Exception, e:
+                        malformed_xml_warning = "Malformed XML: " + str(e)
+
+                    res['malformed_xml_warning'] = " (" + malformed_xml_warning +")"
+
+                    if not stix or (submit_action=='import' and malformed_xml_warning):
                         res['msg'] += "STIX could not be created."
+                        if res['malformed_xml_warning']:
+                            res['msg'] = res['msg'] + " (" + malformed_xml_warning + ")"
                         res['status'] = False
                         return HttpResponse(json.dumps(res), content_type="application/json")
                     else:
                         res['status'] = True
-                        res['msg'] += "STIX successfully generated. "
+                        if malformed_xml_warning:
+                            res['msg'] = malformed_xml_warning
+                        else:
+                            res['msg'] += "STIX successfully generated. "
                         res['xml'] = stix
 
                     if submit_action == 'import':
