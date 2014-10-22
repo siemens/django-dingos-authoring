@@ -16,9 +16,12 @@
 #
 
 
-import logging
+import logging, hashlib
 import pprint
 from django.utils import timezone
+
+from django.core.files.base import ContentFile
+
 
 from django.db import models
 
@@ -29,6 +32,10 @@ from dingos.models import IdentifierNameSpace, InfoObject
 
 
 import dingos_authoring.read_settings
+
+
+AUTHORED_DATA_TABLE = 0
+FILE_SYSTEM = 1
 
 
 
@@ -55,6 +62,7 @@ class Identifier(models.Model):
 
     def __unicode__(self):
         return self.name
+
 
 
 
@@ -154,6 +162,16 @@ class AuthoredData(models.Model):
                                     default=DRAFT,
                                     help_text="""Status""")
 
+
+
+    STORAGE_LOCATION = ((AUTHORED_DATA_TABLE,"Database"),
+                         (FILE_SYSTEM,"Filesystem"))
+
+    storage_location = models.SmallIntegerField(choices=STORAGE_LOCATION,
+                                                default=AUTHORED_DATA_TABLE,
+                                                help_text="Where the data is stored")
+
+
     author_view = models.ForeignKey("AuthorView",
                                      null=True)
 
@@ -167,7 +185,7 @@ class AuthoredData(models.Model):
 
     user = models.ForeignKey(User,null=True)
 
-    group = models.ForeignKey(Group)
+    group = models.ForeignKey(Group,null=True)
 
     timestamp = models.DateTimeField()
 
@@ -303,6 +321,21 @@ class AuthoredData(models.Model):
 
 
 
+    @property
+    def content(self):
+        if self.storage_location == FILE_SYSTEM:
+            value_hash = self.data
+            file_name = '%s.blob' % (value_hash)
+
+            content_file = dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.load(file_name)
+            content = content_file.read()
+            content_file.close()
+            return content
+
+        else:
+            return self.data
+
+
     @staticmethod
     def object_create(kind=None,
                       status=None,
@@ -314,7 +347,8 @@ class AuthoredData(models.Model):
                       name=None,
                       timestamp=timezone.now(),
                       processing_id='',
-                      yielded=None):
+                      yielded=None,
+                      storage_location=None):
 
         if isinstance(identifier,basestring):
             identifier_obj, created = Identifier.objects.get_or_create(name=identifier)
@@ -338,6 +372,16 @@ class AuthoredData(models.Model):
                 existing_objs.update(latest=False)
                 latest= True
 
+        if storage_location == FILE_SYSTEM:
+            value_hash = hashlib.sha256(data).hexdigest()
+            file_name = '%s.blob' % (value_hash)
+
+            if dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.exists(file_name):
+                dingos_authoring.DINGOUS_AUTHORING_DATA_STORAGE.delete(file_name)
+
+            dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.save(file_name, ContentFile(data))
+            data = value_hash
+
         return AuthoredData.objects.create(kind=kind,
                                            user=user,
                                            group=group,
@@ -349,7 +393,8 @@ class AuthoredData(models.Model):
                                            name=name,
                                            latest=latest,
                                            processing_id=processing_id,
-                                           yielded=yielded)
+                                           yielded=yielded,
+                                           storage_location=storage_location)
 
 
 

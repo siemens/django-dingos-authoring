@@ -280,7 +280,7 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                 json_obj = AuthoredData.object_copy(json_obj,user=self.request.user,status=status)
 
             res['data'] = {}
-            res['data']['jsn'] = json_obj.data
+            res['data']['jsn'] = json_obj.content # TODO
             res['data']['name'] = json_obj.name
             res['data']['id'] = json_obj.identifier.name
             res['status'] = True
@@ -361,7 +361,7 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
 
                 else:
                     identifier = Identifier.objects.create(name="%s" % uuid4())
-                    authored_data = AuthoredData.objects.create(identifier = identifier,
+                    authored_data = AuthoredData.objects_create(identifier = identifier,
                                                                 name = data.get('name',"Import of XML via GUI"),
                                                                 status = AuthoredData.IMPORTED,
                                                                 kind = AuthoredData.XML,

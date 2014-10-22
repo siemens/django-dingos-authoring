@@ -33,8 +33,10 @@ def scheduled_import(importer,
 
     created_object_ids = [x['pk'] for x in created_object_info]
 
-    created_objects = list(InfoObject.objects.filter(pk__in=created_object_ids))
 
+    import_result = list(InfoObject.objects.filter(pk__in=created_object_ids))
+
+    created_objects = import_result.get('created_objects_info',[])
 
     for object in created_objects:
         name = object.set_name()
