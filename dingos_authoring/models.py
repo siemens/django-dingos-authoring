@@ -327,7 +327,7 @@ class AuthoredData(models.Model):
             value_hash = self.data
             file_name = '%s.blob' % (value_hash)
 
-            content_file = dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.load(file_name)
+            content_file = dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.open(file_name)
             content = content_file.read()
             content_file.close()
             return content
@@ -348,7 +348,7 @@ class AuthoredData(models.Model):
                       timestamp=timezone.now(),
                       processing_id='',
                       yielded=None,
-                      storage_location=None):
+                      storage_location=AUTHORED_DATA_TABLE):
 
         if isinstance(identifier,basestring):
             identifier_obj, created = Identifier.objects.get_or_create(name=identifier)
@@ -377,8 +377,7 @@ class AuthoredData(models.Model):
             file_name = '%s.blob' % (value_hash)
 
             if dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.exists(file_name):
-                dingos_authoring.DINGOUS_AUTHORING_DATA_STORAGE.delete(file_name)
-
+                dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.delete(file_name)
             dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.save(file_name, ContentFile(data))
             data = value_hash
 

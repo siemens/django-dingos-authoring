@@ -39,7 +39,7 @@ from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
 from dingos.core.utilities import lookup_in_re_list
 from dingos.importer import Generic_XML_Import
 from dingos.models import InfoObject, InfoObject2Fact
-from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicFilterView, BasicListActionView
+from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicXMLView, BasicFilterView, BasicListActionView
 
 
 
@@ -582,3 +582,14 @@ class SwitchAuthoringGroupView(AuthoringMethodMixin,BasicTemplateView):
 
         return super(SwitchAuthoringGroupView,self).get(request, *args, **kwargs)
 
+
+class ImportedXMLView(BasicXMLView):
+    @property
+    def returned_xml(self):
+        iobject_id = self.kwargs.get('pk', None)
+        iobject = InfoObject.objects.get(pk=iobject_id)
+        authored_objects = iobject.yielded_by.all().filter(kind=AuthoredData.XML).order_by('-timestamp')
+        print authored_objects
+        if authored_objects:
+            authored_object = authored_objects[0]
+            return authored_object.content

@@ -35,13 +35,13 @@ if settings.configured and 'DINGOS_AUTHORING' in dir(settings):
                                   "for storing authored data (usually imported XMLs) on the filesystem. "
                                   "Example setting : root('authoring','imports')")
 
-else:
-    dingos_authoring.DINGOS_AUTHORING_DATA_FILESYSTEM_ROOT = settings.DINGOS_AUTHORING['DATA_FILESYSTEM_ROOT']
+    else:
+        dingos_authoring.DINGOS_AUTHORING_DATA_FILESYSTEM_ROOT = settings.DINGOS_AUTHORING['DATA_FILESYSTEM_ROOT']
 
-    dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE = FileSystemStorage(location=dingos_authoring.DINGOS_AUTHORING_DATA_FILESYSTEM_ROOT)
-    # We do not want the blobs to be directly available via URL.
-    # Reading the code it seems that setting 'base_url=None' in
-    # the __init__ arguments does not help, because __init__
-    # then choses the media URL as default url. So we have
-    # to set it explicitly after __init__ is done.
-    dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.base_url=None
+        dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE = FileSystemStorage(location=dingos_authoring.DINGOS_AUTHORING_DATA_FILESYSTEM_ROOT)
+        # We do not want the blobs to be directly available via URL.
+        # Reading the code it seems that setting 'base_url=None' in
+        # the __init__ arguments does not help, because __init__
+        # then choses the media URL as default url. So we have
+        # to set it explicitly after __init__ is done.
+        dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.base_url=None

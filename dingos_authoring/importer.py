@@ -8,6 +8,8 @@ from dingos.importer import DingoImportCommand
 from dingos.models import InfoObject
 from .models import AuthoredData
 
+from dingos_authoring.models import FILE_SYSTEM
+
 
 
 class DingosAuthoringImportCommand(DingoImportCommand):
@@ -56,16 +58,17 @@ class DingosAuthoringImportCommand(DingoImportCommand):
     """
 
 
+    custom_options = {'track_created_objects':True}
+
     def import_postprocessor_handle(self,import_result):
 
-        created_objects_info = import_result.get('created_objects_info',None)
+        created_objects_info = import_result.get('created_object_info',None)
 
         xml = import_result.get('file_content',None)
 
-
         if xml and created_objects_info:
             identifier = hashlib.sha256(xml).hexdigest()
-            xml_import_obj = AuthoredData.objects_create(identifier = identifier,
+            xml_import_obj = AuthoredData.object_create(identifier = identifier,
                                                         name = "Import of XML via commandline",
                                                         status = AuthoredData.IMPORTED,
                                                         kind = AuthoredData.XML,
@@ -73,7 +76,7 @@ class DingosAuthoringImportCommand(DingoImportCommand):
                                                         user = None,
                                                         group = None,
                                                         timestamp = timezone.now(),
-                                                        latest=True)
+                                                        storage_location=FILE_SYSTEM)
 
 
             # Now call set_name on each object once more;
@@ -81,10 +84,9 @@ class DingosAuthoringImportCommand(DingoImportCommand):
             # names of referenced objects, and they do not always
             # get created in the proper order.
 
-            created_object_ids = [x['pk'] for x in created_objects_info]
+            created_object_ids = [x['pk'] for x in created_objects_info if x['existed'] != 'existed']
 
             created_objects = list(InfoObject.objects.filter(pk__in=created_object_ids))
-
 
             for object in created_objects:
                 name = object.set_name()
