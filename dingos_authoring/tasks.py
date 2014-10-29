@@ -23,8 +23,10 @@ def scheduled_import(importer,
                      xml,
                      xml_import_obj):
 
-    created_object_info = importer.xml_import(xml_content = xml,
-                                              track_created_objects=True)
+    import_result = importer.xml_import(xml_content = xml,
+                                        track_created_objects=True)
+
+    created_object_info = import_result.get('created_object_info',[])
 
     # Now call set_name on each object once more;
     # this is required, because object names may depend on
@@ -34,7 +36,6 @@ def scheduled_import(importer,
     created_object_ids = [x['pk'] for x in created_object_info]
 
     created_objects = list(InfoObject.objects.filter(pk__in=created_object_ids))
-
 
     for object in created_objects:
         name = object.set_name()

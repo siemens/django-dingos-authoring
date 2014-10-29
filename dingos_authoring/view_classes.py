@@ -199,7 +199,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                         res['status'] = False
                         return HttpResponse(json.dumps(res), content_type="application/json")
 
-                    if previous_obj and previous_obj.data == jsn:
+                    if previous_obj and previous_obj.content == jsn:
                         res['msg'] = "No changes to be saved. "
                     else:
                         obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,

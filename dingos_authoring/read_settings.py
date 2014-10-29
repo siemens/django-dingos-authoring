@@ -16,7 +16,7 @@
 #
 
 from django.conf import settings
-
+from django.core.files.storage import FileSystemStorage
 
 import dingos_authoring
 
@@ -26,3 +26,22 @@ if settings.configured and 'DINGOS_AUTHORING' in dir(settings):
 if settings.configured and 'DINGOS_AUTHORING' in dir(settings):
     dingos_authoring.DINGOS_AUTHORING_CELERY_BUG_WORKAROUND = settings.DINGOS_AUTHORING.get('CELERY_BUG_WORKAROUND', dingos_authoring.DINGOS_AUTHORING_CELERY_BUG_WORKAROUND)
 
+
+if settings.configured and 'DINGOS_AUTHORING' in dir(settings):
+
+    if not "DATA_FILESYSTEM_ROOT" in settings.DINGOS_AUTHORING:
+        raise NotImplementedError("Please configure a DATA_FILESYSTEM_ROOT  directory in the DINGOS_AUTHORING settings (look "
+                                  "at how the MEDIA directory is defined and define an appropriate directory "
+                                  "for storing authored data (usually imported XMLs) on the filesystem. "
+                                  "Example setting : root('authoring','imports')")
+
+    else:
+        dingos_authoring.DINGOS_AUTHORING_DATA_FILESYSTEM_ROOT = settings.DINGOS_AUTHORING['DATA_FILESYSTEM_ROOT']
+
+        dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE = FileSystemStorage(location=dingos_authoring.DINGOS_AUTHORING_DATA_FILESYSTEM_ROOT)
+        # We do not want the blobs to be directly available via URL.
+        # Reading the code it seems that setting 'base_url=None' in
+        # the __init__ arguments does not help, because __init__
+        # then choses the media URL as default url. So we have
+        # to set it explicitly after __init__ is done.
+        dingos_authoring.DINGOS_AUTHORING_DATA_STORAGE.base_url=None

@@ -39,7 +39,7 @@ from dingos import DINGOS_INTERNAL_IOBJECT_FAMILY_NAME, DINGOS_TEMPLATE_FAMILY
 from dingos.core.utilities import lookup_in_re_list
 from dingos.importer import Generic_XML_Import
 from dingos.models import InfoObject, InfoObject2Fact
-from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicFilterView, BasicListActionView
+from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicXMLView, BasicFilterView, BasicListActionView
 
 
 
@@ -280,7 +280,7 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                 json_obj = AuthoredData.object_copy(json_obj,user=self.request.user,status=status)
 
             res['data'] = {}
-            res['data']['jsn'] = json_obj.data
+            res['data']['jsn'] = json_obj.content # TODO
             res['data']['name'] = json_obj.name
             res['data']['id'] = json_obj.identifier.name
             res['status'] = True
@@ -361,7 +361,7 @@ class XMLImportView(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateVie
 
                 else:
                     identifier = Identifier.objects.create(name="%s" % uuid4())
-                    authored_data = AuthoredData.objects.create(identifier = identifier,
+                    authored_data = AuthoredData.objects_create(identifier = identifier,
                                                                 name = data.get('name',"Import of XML via GUI"),
                                                                 status = AuthoredData.IMPORTED,
                                                                 kind = AuthoredData.XML,
@@ -582,3 +582,14 @@ class SwitchAuthoringGroupView(AuthoringMethodMixin,BasicTemplateView):
 
         return super(SwitchAuthoringGroupView,self).get(request, *args, **kwargs)
 
+
+class ImportedXMLView(BasicXMLView):
+    @property
+    def returned_xml(self):
+        iobject_id = self.kwargs.get('pk', None)
+        iobject = InfoObject.objects.get(pk=iobject_id)
+        authored_objects = iobject.yielded_by.all().filter(kind=AuthoredData.XML).order_by('-timestamp')
+        print authored_objects
+        if authored_objects:
+            authored_object = authored_objects[0]
+            return authored_object.content

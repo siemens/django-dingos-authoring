@@ -28,7 +28,6 @@ urlpatterns = [
     url(r'^History$', views.index.as_view(), name="url.dingos_authoring.index"),
     url(r'^History/(?P<id>[^/]*)/$', views.AuthoredDataHistoryView.as_view(), name="url.dingos_authoring.view.authored_object.history"),
 
-    
     # The XML import page
     url(r'^XMLImport/$', views.XMLImportView.as_view(), name= "dingos_authoring.action.xml_import"),
 
