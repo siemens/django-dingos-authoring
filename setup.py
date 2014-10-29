@@ -36,7 +36,7 @@ setup(
     ],
     include_package_data=True,
     install_requires=[
-        'django-dingos>=0.2.0',
+        'django-dingos>=0.3.0',
 
     ],
     license="GPLv2+",
