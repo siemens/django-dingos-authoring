@@ -1,39 +1,31 @@
 =============================
-django-dingos-authoring
+Django Dingos Authoring
 =============================
 
-.. image:: https://badge.fury.io/py/django-dingos-authoring.png
-    :target: http://badge.fury.io/py/django-dingos-authoring
-
-.. image:: https://travis-ci.org/siemens/django-dingos-authoring.png?branch=master
-    :target: https://travis-ci.org/siemens/django-dingos-authoring
-
-.. image:: https://coveralls.io/repos/siemens/django-dingos-authoring/badge.png?branch=master
-    :target: https://coveralls.io/r/siemens/django-dingos-authoring?branch=master
-
-.. image:: https://pypip.in/d/django-dingos-authoring/badge.png
-    :target: https://crate.io/packages/django-dingos-authoring?version=latest
-
-
-Support for authoring of data to be imported into Dingos.
+A module providing base functionality for authoring in Django DINGOS.
 
 Documentation
 -------------
 
-The full documentation is at http://django-dingos-authoring.rtfd.org.
+The full documentation is at http://django-dingos-authoring.readthedocs.org.
+
 
 Quickstart
 ----------
 
-Install django-dingos-authoring::
+Please refer to the quickstart information of MANTIS, available at http://django-mantis.readthedocs.org.
 
-    pip install django-dingos-authoring
 
-Then use it in a project::
+Acknowledgments
+---------------
 
-    import django-dingos-authoring
 
-Features
---------
+The basic layout for this Django app with out-of-the-box configuration of ``setup.py`` for
+easy build, submission to PyPi, etc., and Sphinx documentation tree was generated with Audrey Roy's excellent `Cookiecutter`_
+and Daniel Greenfield's `cookiecutter-djangopackage`_ template.
 
-* TODO
+
+.. _Cookiecutter: https://github.com/audreyr/cookiecutter
+
+
+.. _cookiecutter-djangopackage: https://github.com/pydanny/cookiecutter-djangopackage
