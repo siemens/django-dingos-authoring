@@ -142,10 +142,6 @@ class AuthoringMethodMixin(object):
 
 
 
-def guiJSONImport(jsn):
-
-
-
 class BasicProcessingView(AuthoringMethodMixin,BasicView):
     importer_class = None
     author_view = None
