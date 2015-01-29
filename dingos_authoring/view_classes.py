@@ -243,7 +243,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
             'msg': 'An error occured.'
         }
 
-        if True:
+        try:
             POST = request.POST
             res['msg']=''
             jsn = ''
@@ -331,10 +331,10 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                                   result = res
                     )
 
-        #except Exception, e:
-        #    res['msg'] = "An error occured: %s" % str(e)
-        #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (str(e),traceback.format_exc()))
-        #    res['status'] = False
+        except Exception, e:
+            res['msg'] = "An error occured: %s" % str(e)
+            logger.error("Authoring attempt resulted in error %s, traceback %s" % (str(e),traceback.format_exc()))
+            res['status'] = False
 
 
         return HttpResponse(json.dumps(res), content_type="application/json")
