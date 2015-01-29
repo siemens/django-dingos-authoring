@@ -155,13 +155,14 @@ def guiJSONimport(transformer,
     if not result:
         result = {'msg':""}
 
+    malformed_xml_warning = ''
     try:
         t = transformer(jsn=jsn,
                         namespace_uri=namespace_info['default_ns_uri'],
                         namespace_slug=namespace_info['default_ns_slug'])
 
         xml = t.getStix()
-        malformed_xml_warning = ''
+
         try:
             etree.fromstring(xml)
         except Exception, e:
@@ -183,10 +184,11 @@ def guiJSONimport(transformer,
     result['status'] = True
     result['msg'] += "XML successfully generated. "
     result['xml'] = xml
+    result['malformed_xml_warning'] = ""
 
     if action == 'import':
         if not authored_data_identifier:
-            authored_data_identifier = uuid4()
+            authored_data_identifier = "%s" % uuid4()
 
         xml_import_obj = AuthoredData.object_create(kind=AuthoredData.XML,
                                                     user=user,

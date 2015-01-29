@@ -30,6 +30,8 @@ urlpatterns = [
 
     # The XML import page
     url(r'^XMLImport/$', views.XMLImportView.as_view(), name= "dingos_authoring.action.xml_import"),
+    # The Test GUI JSON Import page
+    url(r'^GUIJSONImport/$', views.GUI_JSON_ImportTest.as_view(), name= "dingos_authoring.action.gui_json_import"),
 
     url(r'^Imports$', views.ImportsView.as_view(), name="url.dingos_authoring.imports"),
     url(r'^Action/_take_reports$', views.TakeReportView.as_view(), name="url.dingos_authoring.index.action.take"),

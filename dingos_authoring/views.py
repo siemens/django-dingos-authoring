@@ -40,10 +40,11 @@ from dingos.core.utilities import lookup_in_re_list
 from dingos.importer import Generic_XML_Import
 from dingos.models import InfoObject, InfoObject2Fact
 from dingos.view_classes import BasicListView, BasicTemplateView, BasicJSONView, BasicXMLView, BasicFilterView, BasicListActionView
+from dingos_authoring.view_classes import guiJSONimport
 
 
 
-from forms import XMLImportForm, SwitchAuthoringGroupForm
+from forms import XMLImportForm, SwitchAuthoringGroupForm, GUIJSONImportForm
 import forms as observables
 
 from . import DINGOS_AUTHORING_IMPORTER_REGISTRY, DINGOS_AUTHORING_CELERY_BUG_WORKAROUND
@@ -287,6 +288,71 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
             res['msg'] = 'Loaded \'' + json_obj.name + '\''
 
         return res
+
+
+
+class GUI_JSON_ImportTest(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTemplateView):
+    """
+    View for testing the GUI JSON import and the usage of the
+    guiJSONimport function.
+    """
+
+    # This import here locally, because it adds a dependency on
+    # django-mantis-authoring. Import
+
+    from mantis_authoring.CampaignIndicators import ProcessingView
+
+    transformer = ProcessingView.transformer
+    author_view = ProcessingView.author_view
+    importer_class = ProcessingView.importer_class
+
+    template_name = 'dingos_authoring/%s/XMLImport.html' % DINGOS_TEMPLATE_FAMILY
+    title = 'Import GUI JSON'
+
+    def get_context_data(self, **kwargs):
+        context = super(GUI_JSON_ImportTest, self).get_context_data(**kwargs)
+        context['form'] = self.form
+        return context
+
+    def get(self, request, *args, **kwargs):
+        self.form = GUIJSONImportForm({'name':'Import of GUI-JSON via GUI'})
+        return super(BasicTemplateView,self).get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.form = GUIJSONImportForm(request.POST.dict())
+
+        if self.form.is_valid():
+            data = self.form.cleaned_data
+            jsn = data['json']
+
+            try:
+                namespace_info = self.get_authoring_namespaces(self.request.user)
+            except StandardError, e:
+                messages.error(self.request,e.message)
+                return super(GUI_JSON_ImportTest,self).get(request, *args, **kwargs)
+
+
+
+            res = guiJSONimport(self.transformer,
+                                self.author_view,
+                                self.importer_class,
+                                jsn,
+                                namespace_info,
+                                authored_data_name = data["name"],
+                                user = request.user,
+                                action = 'import',
+                  )
+
+
+            if res['status']:
+
+                messages.success(self.request,res['msg'])
+            else:
+                messages.error(self.request,res['msg'])
+
+            self.form = GUIJSONImportForm()
+
+        return super(GUI_JSON_ImportTest,self).get(request, *args, **kwargs)
 
 
 

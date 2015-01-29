@@ -37,6 +37,18 @@ class XMLImportForm(forms.Form):
                           validators=[validate_xml])
 
 
+class GUIJSONImportForm(forms.Form):
+    name = forms.CharField(required=True,
+                           help_text="This name is shown as report name in authoring interface",
+                           max_length=256,
+                           widget=widgets.TextInput(attrs={'size':'100','class':'vTextField'}))
+    json = forms.CharField(required=False,
+                          help_text = """Paste here valid Mantis GUI JSON""",
+                          widget=widgets.Textarea(attrs={'cols':100,'rows':10,'style': 'height:auto; width:100%;resize:vertical;min-height:150px;'}),
+                          )
+
+
+
 class SwitchAuthoringGroupForm(forms.Form):
     def __init__(self, *args, **kwargs):
         if 'group_choices' in kwargs:
