@@ -152,6 +152,53 @@ def guiJSONimport(transformer,
                   action = 'import',
                   result = None
                   ):
+    """
+    Import JSON that is understood by the Mantis GUI into Mantis
+
+    The function takes the following arguments:
+
+    - transformer: A transformer class -- see the STIXTransformer of mantis_authoring.CampaignIndicators as example
+    - author_view: The name of the view via which this kind of JSON can be edited by the user in the GUI.
+      Example: 'url.mantis_authoring.transformers.stix.campaing_indicators'
+    - importer_class: The XML importer, usually STIX_Import from mantis_stix_importer.importer
+    - jsn: The GUI-json (as string, not as Python dictionary)
+    - namespace_info: Namespace info for the user in whose name the JSON is to be imported;
+      get this via 'self.namespace_info' in all views that include the 'AuthoringMethodMixin'
+    - authored_data_name: The name of the report as it will occur in the overview of existing reports
+      in the authoring interface
+    - user: Django user object of the user in whose name the import is to be carried out. Get this
+            via 'request.user' from the view you are calling this function from.
+    - authored_data_identifier: the unique identifier of the AuthoredData object (internal to MANTIS).
+      If no identifier is provided (which should be the case for generating a new object), leave empty
+    - action: 'import' or 'generate': When 'import', XML is generated and imported; otherwise,
+      XML is only generated and returned as part of the results dictionary
+    - result: If you already have a results dictionary that is to be augmented, pass it in here;
+      otherwise, a new dictionary is created and returned to the user
+
+    The result of calling the function is as follows:
+
+    - If 'action' is set to 'import', as sideeffect XML is generated and imported; also, an AuthoredData
+      object is created (actually two, one for the JSON, the other for the resulting XML)
+
+    - The result dictionary (either newly created or written into existing dictionary) is as follows:
+
+      - In case of success::
+
+          {'status':True,
+           'msg': <success msg>,
+           'malformed_xml_warning': ''
+           'xml': <xml>   <-- This only if action != import
+          }
+
+      - In case of failure::
+          {'status': False,
+           'msg': <error msg>',
+           'malformed_xml_warning': <If the resulting XML did not parse, error msg is included here>
+          }
+
+      *Note*: If you passed in an existing dictionary, the function /adds/ to 'msg' rather than
+      overwriting it.
+    """
     if not result:
         result = {'msg':""}
 
