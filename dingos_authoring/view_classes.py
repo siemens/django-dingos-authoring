@@ -21,7 +21,7 @@ from dingos.view_classes import BasicView
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
-
+from uuid import uuid4
 
 
 
@@ -141,6 +141,94 @@ class AuthoringMethodMixin(object):
             return self._namespace_info
 
 
+def guiJSONimport(transformer,
+                  author_view,
+                  importer_class,
+                  jsn,
+                  namespace_info,
+                  authored_data_name,
+                  user,
+                  authored_data_identifier=None,
+                  action = 'import',
+                  result = None
+                  ):
+    if not result:
+        result = {'msg':""}
+
+    try:
+        t = transformer(jsn=jsn,
+                        namespace_uri=namespace_info['default_ns_uri'],
+                        namespace_slug=namespace_info['default_ns_slug'])
+
+        xml = t.getStix()
+        malformed_xml_warning = ''
+        try:
+            etree.fromstring(xml)
+        except Exception, e:
+            malformed_xml_warning = "Malformed XML: " + str(e)
+    except Exception,e:
+        result['msg'] = "An error occured: %s" % str(e)
+        logger.error("Authoring attempt resulted in error %s, traceback %s" % (str(e),traceback.format_exc()))
+        result['status'] = False
+        return result
+
+    if malformed_xml_warning:
+        result['malformed_xml_warning'] = " (" + malformed_xml_warning +")"
+        result['status'] = False
+        result['msg'] += "XML could not be created."
+        result['msg'] = result['msg'] + " (" + malformed_xml_warning + ")"
+        result['status'] = False
+        return result
+
+    result['status'] = True
+    result['msg'] += "XML successfully generated. "
+    result['xml'] = xml
+
+    if action == 'import':
+        if not authored_data_identifier:
+            authored_data_identifier = uuid4()
+
+        xml_import_obj = AuthoredData.object_create(kind=AuthoredData.XML,
+                                                    user=user,
+                                                    group=namespace_info['authoring_group'],
+                                                    identifier= authored_data_identifier,
+                                                    timestamp=timezone.now(),
+                                                    status=AuthoredData.IMPORTED,
+                                                    name=authored_data_name,
+                                                    author_view=None,
+                                                    data = xml)
+
+
+        importer = importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'] + [namespace_info['default_ns_uri']],
+                                  default_identifier_ns_uri=namespace_info['default_ns_uri'],
+                                  substitute_unallowed_namespaces=False)
+
+
+        async_result = tasks.scheduled_import.delay(importer=importer,
+                                                    xml=xml,
+                                                    xml_import_obj=xml_import_obj)
+
+        xml_import_obj.processing_id = async_result.id
+
+        xml_import_obj.save()
+
+        AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
+                                   user=None,
+                                   group=namespace_info['authoring_group'],
+                                   identifier= authored_data_identifier,
+                                   timestamp= timezone.now(),
+                                   status=AuthoredData.IMPORTED,
+                                   name=authored_data_name,
+                                   author_view=author_view,
+                                   data = jsn,
+                                   yielded = xml_import_obj)
+        result['status'] = True
+        result['msg'] += "Import started and report released. "
+
+    return result
+
+
+
 
 class BasicProcessingView(AuthoringMethodMixin,BasicView):
     importer_class = None
@@ -153,7 +241,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
             'msg': 'An error occured.'
         }
 
-        try:
+        if True:
             POST = request.POST
             res['msg']=''
             jsn = ''
@@ -228,96 +316,23 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                     res['status'] = True
 
                 if submit_action in ["generate", "import"]:
-                    t = self.transformer(jsn=jsn,
-                                         namespace_uri=namespace_info['default_ns_uri'],
-                                         namespace_slug=namespace_info['default_ns_slug'],)
-                    stix = t.getStix()
 
-                    # Unfortunately, the transformer might return invalid XML
-                    # We cannot check for schema-correctness, but at least for
-                    # whether the XML can actually be parsed.
+                    guiJSONimport(self.transformer,
+                                  self.author_view,
+                                  self.importer_class,
+                                  jsn,
+                                  namespace_info,
+                                  submit_name,
+                                  request.user,
+                                  authored_data_identifier=identifier,
+                                  action = submit_action,
+                                  result = res
+                    )
 
-                    malformed_xml_warning = ''
-                    try:
-                        etree.fromstring(stix)
-                    except Exception, e:
-                        malformed_xml_warning = "Malformed XML: " + str(e)
-
-                    res['malformed_xml_warning'] = " (" + malformed_xml_warning +")"
-
-                    if not stix or (submit_action=='import' and malformed_xml_warning):
-                        res['msg'] += "STIX could not be created."
-                        if res['malformed_xml_warning']:
-                            res['msg'] = res['msg'] + " (" + malformed_xml_warning + ")"
-                        res['status'] = False
-                        return HttpResponse(json.dumps(res), content_type="application/json")
-                    else:
-                        res['status'] = True
-                        if malformed_xml_warning:
-                            res['msg'] = malformed_xml_warning
-                        else:
-                            res['msg'] += "STIX successfully generated. "
-                        res['xml'] = stix
-
-                    if submit_action == 'import':
-                        self.importer_class.xml_import
-
-                        importer = self.importer_class(allowed_identifier_ns_uris=namespace_info['allowed_ns_uris'] + [namespace_info['default_ns_uri']],
-                                                            default_identifier_ns_uri=namespace_info['default_ns_uri'],
-                                                            substitute_unallowed_namespaces=True)
-
-
-                        xml_import_obj = AuthoredData.object_create(kind=AuthoredData.XML,
-                                                                    user=request.user,
-                                                                    group=namespace_info['authoring_group'],
-                                                                    identifier= identifier,
-                                                                    timestamp=timezone.now(),
-                                                                    status=AuthoredData.IMPORTED,
-                                                                    name=submit_name,
-                                                                    author_view=None,
-                                                                    data = res['xml'])
-
-
-                        #result = scheduled_import.delay(importer=importer,
-
-                        if DINGOS_AUTHORING_CELERY_BUG_WORKAROUND:
-                            # This is an ugly hack which breaks the independence of the django-dingos-authoring
-                            # app from the top-level configuration.
-                            # The hack may be required in instances where the celery tasks defined in Django
-                            # are not instantiated correctly: we have a system on which the configuration of
-                            # celery as seen when starting the worker is perfectly ok, yet within Django,
-                            # the tasks are not assigned the correct backend.
-                            from mantis.celery import app as celery_app
-
-
-
-                        result = tasks.scheduled_import.delay(importer=importer,
-                                                        xml=res['xml'],
-                                                        xml_import_obj=xml_import_obj)
-
-                        xml_import_obj.processing_id = result.id
-
-                        xml_import_obj.save()
-
-                        AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
-                                                   user=None,
-                                                   group=namespace_info['authoring_group'],
-                                                   identifier= identifier,
-                                                   timestamp= timezone.now(),
-                                                   status=AuthoredData.IMPORTED,
-                                                   name=submit_name,
-                                                   author_view=self.author_view,
-                                                   data = jsn,
-                                                   yielded = xml_import_obj)
-
-
-                        res['status'] = True
-                        res['msg'] += "Import started and report released. "
-
-        except Exception, e:
-            res['msg'] = "An error occured: %s" % str(e)
-            logger.error("Authoring attempt resulted in error %s, traceback %s" % (str(e),traceback.format_exc()))
-            res['status'] = False
+        #except Exception, e:
+        #    res['msg'] = "An error occured: %s" % str(e)
+        #    logger.error("Authoring attempt resulted in error %s, traceback %s" % (str(e),traceback.format_exc()))
+        #    res['status'] = False
 
 
         return HttpResponse(json.dumps(res), content_type="application/json")
