@@ -589,7 +589,7 @@ class ImportedXMLView(BasicXMLView):
         iobject_id = self.kwargs.get('pk', None)
         iobject = InfoObject.objects.get(pk=iobject_id)
         authored_objects = iobject.yielded_by.all().filter(kind=AuthoredData.XML).order_by('-timestamp')
-        print authored_objects
+
         if authored_objects:
             authored_object = authored_objects[0]
             return authored_object.content
