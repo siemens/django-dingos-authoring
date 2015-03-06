@@ -59,6 +59,10 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                     <th>
                         Timestamp
                     </th>
+                    <th>
+                        Contents
+                    </th>
+
                     <th></th>
 
                  </thead>
@@ -87,6 +91,7 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                             <td {% highlight_if_equal obj.pk highlight_pk %}>
                                 {{ obj.timestamp }}
                             </td>
+                            <td> {{ obj.content | slice:":128" }}...</td>
                             <td {% highlight_if_equal obj.pk highlight_pk %}>
                                 {%  if obj.latest %}
                                     {%url obj.author_view.name as the_url %}
