@@ -39,6 +39,8 @@ urlpatterns = [
     # Cross-authoring-app functionality
     url(r'^load$', views.GetDraftJSON.as_view(), name="url.dingos_authoring.load_json"),
     url(r'/load$', views.GetDraftJSON.as_view(), name="url.dingos_authoring.load_json"),
+    url(r'^ping$', views.Ping.as_view(), name="url.dingos_authoring.ping"),
+    url(r'/ping$', views.Ping.as_view(), name="url.dingos_authoring.ping"),
 
     url(r'/get_namespace$', views.GetAuthoringNamespace.as_view(), name="url.dingos_authoring.get_namespace"),
 

@@ -593,3 +593,17 @@ class ImportedXMLView(BasicXMLView):
         if authored_objects:
             authored_object = authored_objects[0]
             return authored_object.content
+
+
+class Ping(AuthoringMethodMixin, BasicJSONView):
+    """
+    Empty view with the only purpose of keeping the user session in the authoring GUIs active
+    """
+    @property
+    def returned_obj(self):
+        res = {
+            'status': True,
+            'msg': 'Ok',
+            'data': None
+        }
+        return res
