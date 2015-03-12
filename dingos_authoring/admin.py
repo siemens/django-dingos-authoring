@@ -92,6 +92,7 @@ class AuthoredDataAdmin(admin.ModelAdmin):
 #
 
 
+admin.site.register(AuthorView)
 
 admin.site.register(AuthoredData,AuthoredDataAdmin)
 #admin.site.register(AuthorView)

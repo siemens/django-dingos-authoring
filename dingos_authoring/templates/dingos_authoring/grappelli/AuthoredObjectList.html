@@ -96,8 +96,17 @@ Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
                             </td>
 
                             <td>
+                            {% url obj.author_view.name as author_view_url %}
+
                                 {%  if obj.user == view.request.user or obj.user == None%}
-                                    <a class="grp-button" href="{% url obj.author_view.name %}?load={{ obj.identifier.name | urlencode }} ">EDIT</a>
+                                    {% if author_view_url %}
+                                                                                <a class="grp-button" href="{{ author_view_url }}?load={{ obj.identifier.name | urlencode }} ">EDIT</a>
+                                    {% else %}
+                                        Unknown Autor View
+                                    {% endif %}
+
+
+
                                 {% endif %}
                             </td>
                         </tr>

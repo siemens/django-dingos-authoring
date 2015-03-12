@@ -142,7 +142,6 @@ class AuthoringMethodMixin(object):
 
 
 
-
 class BasicProcessingView(AuthoringMethodMixin,BasicView):
     importer_class = None
     author_view = None
