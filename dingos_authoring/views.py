@@ -606,4 +606,12 @@ class Ping(AuthoringMethodMixin, BasicJSONView):
             'msg': 'Ok',
             'data': None
         }
+
+        # This triggers an update of the users session which results in pushing
+        # a cookie with new expiry
+        if self.request.user:
+            self.request.session.modified = True
+        else:
+            res['status'] = False
+        
         return res
