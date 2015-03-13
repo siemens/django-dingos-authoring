@@ -170,7 +170,7 @@ class index(AuthoringMethodMixin,BasicFilterView):
 
         return AuthoredData.objects.filter(Q(kind=AuthoredData.AUTHORING_JSON,group=namespace_info['authoring_group'],latest=True)
                                        &
-                                       (Q(status=AuthoredData.UPDATE) | Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))). \
+                                       (Q(status=AuthoredData.AUTOSAVE) | Q(status=AuthoredData.UPDATE) | Q(status=AuthoredData.DRAFT) | Q(status=AuthoredData.IMPORTED))). \
         prefetch_related('identifier','group','user','author_view').prefetch_related('top_level_iobject',
                                                                                      'top_level_iobject__identifier',
                                                                                      'top_level_iobject__identifier__namespace')
