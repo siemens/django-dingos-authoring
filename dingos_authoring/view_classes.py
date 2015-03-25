@@ -255,7 +255,9 @@ def guiJSONimport(transformer,
 
         async_result = tasks.scheduled_import.delay(importer=importer,
                                                     xml=xml,
-                                                    xml_import_obj=xml_import_obj)
+                                                    xml_import_obj=xml_import_obj,
+                                                    import_jsn = json.loads(jsn),
+                                                    user=user)
 
         xml_import_obj.processing_id = async_result.id
 

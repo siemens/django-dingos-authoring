@@ -22,10 +22,15 @@ from celery import shared_task
 
 from dingos.models import InfoObject
 
+from dingos.forms import check_tag_validity
+
 from dingos_authoring.models import AuthoredData
 
+from dingos_authoring import DINGOS_AUTHORING_ACTIONABLES_EXPORT_FUNCTION
 
 import logging
+
+import importlib
 
 import traceback
 
@@ -39,7 +44,9 @@ def add(x, y):
 @shared_task(ignore_result=False)
 def scheduled_import(importer,
                      xml,
-                     xml_import_obj):
+                     xml_import_obj,
+                     import_jsn=None,
+                     user=None):
 
     import_result = importer.xml_import(xml_content = xml,
                                         track_created_objects=True)
@@ -80,4 +87,45 @@ def scheduled_import(importer,
 
         xml_import_obj_reloaded.save()
 
+        # Now we run the import into the actionables backend
+
+
+        export_to_actionables.delay(top_level_iobject,
+                                    import_jsn,
+                                    user)
+
+        #"stix_header_report_type": "incident_report",
+        #"stix_header_title": "IR-12385134",
+        #"stix_header_rtnr": "Siemens-CERT#444444"
+
     return created_object_info
+
+
+@shared_task(ignore_result=True)
+def export_to_actionables(top_level_iobject,
+                          import_jsn=None,
+                          user=None):
+    #tags_to_add = None
+
+    #if import_jsn:
+    #    if import_jsn.get('stix_header_report_type') in ['incident_report', 'investigation']:
+    #        if import_jsn.get('stix_header_title'):
+    #            print import_jsn.get('stix_header_title')
+    #            possible_tag = check_tag_validity(import_jsn.get('stix_header_title'),
+    #                                              run_regexp_checks=True,
+    #                                              raise_exception_on_problem=False)
+
+    #            if possible_tag:
+    #                tags_to_add = [possible_tag]
+
+
+    mod_name, func_name = DINGOS_AUTHORING_ACTIONABLES_EXPORT_FUNCTION.rsplit('.',1)
+    mod = importlib.import_module(mod_name)
+    actionables_export_function = getattr(mod,func_name)
+    actionables_export_function([top_level_iobject],
+                                user = user,
+                                action_comment="Import of Report authored via GUI",
+                                # Tag addition not implemented yet
+                                #tags_to_add= ["IR-21621"]
+    )
+
