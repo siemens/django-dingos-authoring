@@ -104,7 +104,8 @@ def scheduled_import(importer,
 @shared_task(ignore_result=True)
 def export_to_actionables(top_level_iobject,
                           import_jsn=None,
-                          user=None):
+                          user=None,
+                          action_comment='Import of Report authored via GUI'):
     #tags_to_add = None
 
     #if import_jsn:
@@ -124,7 +125,7 @@ def export_to_actionables(top_level_iobject,
     actionables_export_function = getattr(mod,func_name)
     actionables_export_function([top_level_iobject],
                                 user = user,
-                                action_comment="Import of Report authored via GUI",
+                                action_comment=action_comment,
                                 # Tag addition not implemented yet
                                 #tags_to_add= ["IR-21621"]
     )

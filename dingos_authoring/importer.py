@@ -26,6 +26,7 @@ from .models import AuthoredData
 
 from dingos_authoring.models import FILE_SYSTEM
 
+from dingos_authoring.tasks import export_to_actionables
 
 
 class DingosAuthoringImportCommand(DingoImportCommand):
@@ -128,3 +129,12 @@ class DingosAuthoringImportCommand(DingoImportCommand):
                 xml_import_obj_reloaded.top_level_iobject = top_level_iobject
 
                 xml_import_obj_reloaded.save()
+
+            if top_level_iobject:
+
+                export_to_actionables(top_level_iobject,
+                          import_jsn=None,
+                          user=None,
+                          action_comment='Import of XML via commandline')
+
+
