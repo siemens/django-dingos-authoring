@@ -18,6 +18,8 @@
 import hashlib
 from django.utils import timezone
 
+import importlib
+
 
 from dingos.importer import DingoImportCommand
 
@@ -26,7 +28,8 @@ from .models import AuthoredData
 
 from dingos_authoring.models import FILE_SYSTEM
 
-from dingos_authoring.tasks import export_to_actionables
+
+from dingos_authoring import DINGOS_AUTHORING_POSTPROCESSOR_TASK
 
 
 class DingosAuthoringImportCommand(DingoImportCommand):
@@ -132,9 +135,13 @@ class DingosAuthoringImportCommand(DingoImportCommand):
 
             if top_level_iobject:
 
-                export_to_actionables(top_level_iobject,
-                          import_jsn=None,
-                          user=None,
-                          action_comment='Import of XML via commandline')
+                mod_name, func_name = DINGOS_AUTHORING_POSTPROCESSOR_TASK.rsplit('.',1)
+                mod = importlib.import_module(mod_name)
+                postprocessor_task = getattr(mod,func_name)
+
+                postprocessor_task(top_level_iobject,
+                                   import_jsn=None,
+                                   user=None,
+                                   action_comment='Import of XML via commandline')
 
 
