@@ -72,9 +72,10 @@ from models import AuthoredData, GroupNamespaceMap, AuthorView
 class GroupNamespaceMapAdmin(admin.ModelAdmin):
     list_display = ('group','default_namespace')
     fields = ('group','default_namespace','allowed_namespaces')
-    raw_id_fields = ('default_namespace',)
+    raw_id_fields = ('default_namespace','allowed_namespaces')
     autocomplete_lookup_fields = {
         'fk': ['default_namespace'],
+        'm2m' : ['allowed_namespaces']
 
     }
 
