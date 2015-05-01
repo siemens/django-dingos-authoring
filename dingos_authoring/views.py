@@ -213,14 +213,17 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
     """
     View serving latest draft of given name, or respond with the list of available templates
     """
+
     @property
-    def returned_obj(self):
-        authoring_group = self.namespace_info['authoring_group']
+    def returned_obj(self):        
         res = {
             'status': False,
             'msg': 'An error occured loading the requested template',
             'data': None
         }
+        if not self.namespace_info:
+            return res 
+        authoring_group = self.namespace_info['authoring_group']
 
         if 'list' in self.request.GET:
             json_obj_l = AuthoredData.objects.filter(
@@ -228,22 +231,22 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                 user = self.request.user,
                 group = authoring_group,
                 status = AuthoredData.DRAFT,
-                latest = True
-            ).prefetch_related('identifier','group','user','author_view').prefetch_related('top_level_iobject',
-                                                                                           'top_level_iobject__identifier',
-                                                                                           'top_level_iobject__identifier__namespace')
-
+                latest = True,
+                author_view__name = self.author_view
+            ).prefetch_related('identifier','group','user').prefetch_related('top_level_iobject',
+                                                                             'top_level_iobject__identifier',
+                                                                             'top_level_iobject__identifier__namespace')
 
             res['status'] = True
             res['msg'] = ''
             res['data'] = []
-            for el in json_obj_l:                
-                res['data'].append({
+            for el in json_obj_l:
+                nd = {
                     'id': el.identifier.name, 
                     'name': el.name,
                     'date': el.timestamp.strftime("%Y-%m-%d %H:%M")
-                })
-
+                }
+                res['data'].append(nd)
         else:
             name = self.request.GET.get('name',False)
             try:
@@ -268,9 +271,6 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                                 of group %s with identifier %s""" % (authoring_group,name)
                 return res
 
-
-
-
             if not json_obj.user:
                 # The user needs to take the object in order to edit it -- this is
                 # done automatically here.
@@ -281,9 +281,10 @@ class GetDraftJSON(AuthoringMethodMixin,BasicJSONView):
                 json_obj = AuthoredData.object_copy(json_obj,user=self.request.user,status=status)
 
             res['data'] = {}
-            res['data']['jsn'] = json_obj.content # TODO
-            res['data']['name'] = json_obj.name
             res['data']['id'] = json_obj.identifier.name
+            res['data']['name'] = json_obj.name
+            res['data']['date'] = json_obj.timestamp.strftime("%Y-%m-%d %H:%M")
+            res['data']['jsn'] = json_obj.content
             res['status'] = True
             res['msg'] = 'Loaded \'' + json_obj.name + '\''
 
@@ -341,6 +342,7 @@ class GUI_JSON_ImportTest(AuthoringMethodMixin,SuperuserRequiredMixin,BasicTempl
                                 authored_data_name = data["name"],
                                 user = request.user,
                                 action = 'import',
+                                request = self.request
                   )
 
 

@@ -150,7 +150,8 @@ def guiJSONimport(transformer,
                   user,
                   authored_data_identifier=None,
                   action = 'import',
-                  result = None
+                  result = None,
+                  request = None
                   ):
     """
     Import JSON that is understood by the Mantis GUI into Mantis
@@ -174,6 +175,7 @@ def guiJSONimport(transformer,
       XML is only generated and returned as part of the results dictionary
     - result: If you already have a results dictionary that is to be augmented, pass it in here;
       otherwise, a new dictionary is created and returned to the user
+    - request: Your current request object. Will be passed to the transformer
 
     The result of calling the function is as follows:
 
@@ -205,9 +207,11 @@ def guiJSONimport(transformer,
     malformed_xml_warning = ''
     try:
         t = transformer(jsn=jsn,
+                        namespace_info=namespace_info,
                         namespace_uri=namespace_info['default_ns_uri'],
-                        namespace_slug=namespace_info['default_ns_slug'])
-
+                        namespace_slug=namespace_info['default_ns_slug'],
+                        request=request,
+                        action=action)
         xml = t.getStix()
 
         try:
@@ -288,7 +292,7 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
 
     def post(self, request, *args, **kwargs):
         res = {
-            'status': False,
+            'status': True,
             'msg': 'An error occured.'
         }
 
@@ -298,10 +302,10 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
             jsn = ''
             if POST.has_key(u'jsn'):
                 jsn = POST[u'jsn']
-                submit_name = POST[u'submit_name']
+                submit_name = POST.get(u'submit_name')
                 identifier = POST.get(u'id')
-                submit_action = POST.get(u'action')
-                if not (identifier or submit_action):
+                saction = POST.get(u'action')
+                if not (identifier or submit_name):
                     res['msg'] = 'Something went wrong (ajax request missed id and/or action'
                     res['status'] = False
                     return HttpResponse(json.dumps(res), content_type="application/json")
@@ -317,68 +321,91 @@ class BasicProcessingView(AuthoringMethodMixin,BasicView):
                     res['status'] = False
                     return HttpResponse(json.dumps(res), content_type="application/json")
 
-                if submit_action in ['save','release','import']:
+                # Actions are processed in the order they are passed in the
+                # string. If import occurs in the actions a 'save' is appended
+                # if not already in the processing actions.
+                sactions = saction.split(' ')
+                submit_actions = []
+                for s in sactions:
+                    if (len(submit_actions)==0 or submit_actions[-1] != s) and s.strip() != '':
+                        submit_actions.append(s)
 
+
+                for submit_action in submit_actions:
                     try:
                         previous_obj = AuthoredData.objects.get(identifier__name=identifier,
                                                                 group = namespace_info['authoring_group'],
                                                                 latest = True)
-                        status = previous_obj.status
-                        if status == AuthoredData.IMPORTED:
-                            status = AuthoredData.UPDATE
                     except ObjectDoesNotExist:
                         previous_obj = None
-                        status = AuthoredData.DRAFT
+                    
 
-                    if previous_obj and previous_obj.user != self.request.user:
-                        res['msg'] = 'The authoring object has been taken from you by user %s; you are not allowed' \
-                                     ' to save the object anymore.' % previous_obj.user
+                    if submit_action in ['generate', 'import']:
+                        if submit_action == 'import':
+                            if previous_obj and previous_obj.user != self.request.user:
+                                res['msg'] = 'The authoring object has been taken from you by user %s; you are not allowed' \
+                                             ' to save the object anymore.' % previous_obj.user
+                                res['status'] = False
+                                return HttpResponse(json.dumps(res), content_type="application/json")
+                        
+                        guiJSONimport(self.transformer,
+                                      self.author_view,
+                                      self.importer_class,
+                                      jsn,
+                                      namespace_info,
+                                      submit_name,
+                                      request.user,
+                                      authored_data_identifier=identifier,
+                                      action = submit_action,
+                                      result = res,
+                                      request = request
+                        )
+                        if not res['status']:
+                            break
 
-                        res['status'] = False
-                        return HttpResponse(json.dumps(res), content_type="application/json")
+                    if submit_action in ['save','release']:
+                        if previous_obj is None:
+                            status = AuthoredData.DRAFT
+                        elif previous_obj.status == AuthoredData.IMPORTED:
+                            status = AuthoredData.UPDATE
+                        else:
+                            status = previous_obj.status
 
-                    if previous_obj and previous_obj.content == jsn:
-                        res['msg'] = "No changes to be saved. "
-                    else:
-                        obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
-                                                   user=self.request.user,
-                                                   group=namespace_info['authoring_group'],
-                                                   identifier= identifier,
-                                                   timestamp=timezone.now(),
-                                                   status=status,
-                                                   name=submit_name,
-                                                   author_view=self.author_view,
-                                                   data = jsn)
+                        if previous_obj and previous_obj.user != self.request.user:
+                            res['msg'] = 'The authoring object has been taken from you by user %s; you are not allowed' \
+                                         ' to save the object anymore.' % previous_obj.user
+                            res['status'] = False
+                            return HttpResponse(json.dumps(res), content_type="application/json")
 
-                        res['msg'] = 'Changes saved. '
+                        if previous_obj and previous_obj.content == jsn:
+                            res['msg'] = "No changes to be saved. "
+                        else:
+                            obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
+                                                       user=self.request.user,
+                                                       group=namespace_info['authoring_group'],
+                                                       identifier= identifier,
+                                                       timestamp=timezone.now(),
+                                                       status=status,
+                                                       name=submit_name,
+                                                       author_view=self.author_view,
+                                                       data = jsn)
 
-                    if submit_action == 'release':
-                        obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
-                                                   user=None,
-                                                   group=namespace_info['authoring_group'],
-                                                   identifier= identifier,
-                                                   timestamp=timezone.now(),
-                                                   status=status,
-                                                   name=submit_name,
-                                                   author_view=self.author_view,
-                                                   data = jsn)
-                        res['msg'] += 'Report released. '
+                            res['msg'] = 'Changes saved. '
 
-                    res['status'] = True
+                        if submit_action == 'release':
+                            obj = AuthoredData.object_create(kind=AuthoredData.AUTHORING_JSON,
+                                                       user=None,
+                                                       group=namespace_info['authoring_group'],
+                                                       identifier= identifier,
+                                                       timestamp=timezone.now(),
+                                                       status=status,
+                                                       name=submit_name,
+                                                       author_view=self.author_view,
+                                                       data = jsn)
+                            res['msg'] += 'Report released. '
+                        if not res['status']:
+                            break    
 
-                if submit_action in ["generate", "import"]:
-
-                    guiJSONimport(self.transformer,
-                                  self.author_view,
-                                  self.importer_class,
-                                  jsn,
-                                  namespace_info,
-                                  submit_name,
-                                  request.user,
-                                  authored_data_identifier=identifier,
-                                  action = submit_action,
-                                  result = res
-                    )
 
         except Exception, e:
             res['msg'] = "An error occured: %s" % str(e)
