@@ -20,6 +20,8 @@ from __future__ import absolute_import
 
 from celery import shared_task
 
+from dingos import DINGOS_EXPORT_VIEW_TOP_LEVEL_TYPES_THAT_TRIGGER_TRANSFER
+
 from dingos.models import InfoObject
 
 from dingos.forms import check_tag_validity
@@ -68,11 +70,15 @@ def scheduled_import(importer,
     xml_import_obj.yielded_iobjects.add(*created_objects)
 
     try:
-        top_level_iobject = InfoObject.objects.get(pk=created_object_ids[-1])
+        top_level_iobjects = InfoObject.objects.\
+            filter(pk__in=created_object_ids).\
+            filter(iobject_type__name__in=DINGOS_EXPORT_VIEW_TOP_LEVEL_TYPES_THAT_TRIGGER_TRANSFER)
     except:
-        top_level_iobject = None
+        top_level_iobjects = []
 
-    if top_level_iobject:
+
+
+    if len(top_level_iobjects) == 1:
         # We need to retrieve the object once more, because
         # if we save now, we are going to overwrite the object
         # that has been written directly after the scheduled
@@ -81,6 +87,8 @@ def scheduled_import(importer,
         # because that does not change the object -- it creates
         # objects in an internal through-model
 
+        top_level_iobject = top_level_iobjects[0]
+
         xml_import_obj_reloaded = AuthoredData.objects.get(pk=xml_import_obj.pk)
 
         xml_import_obj_reloaded.top_level_iobject = top_level_iobject
@@ -88,6 +96,8 @@ def scheduled_import(importer,
         xml_import_obj_reloaded.save()
 
         # Now we run the import into the actionables backend
+
+    for top_level_iobject in top_level_iobjects:
 
         mod_name, func_name = DINGOS_AUTHORING_POSTPROCESSOR_TASK.rsplit('.',1)
         mod = importlib.import_module(mod_name)

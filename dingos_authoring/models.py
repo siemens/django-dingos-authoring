@@ -29,16 +29,10 @@ from django.contrib.auth.models import User, Group
 
 from dingos.models import IdentifierNameSpace, InfoObject
 
-
-
 import dingos_authoring.read_settings
-
 
 AUTHORED_DATA_TABLE = 0
 FILE_SYSTEM = 1
-
-
-
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=2)
@@ -62,11 +56,6 @@ class Identifier(models.Model):
 
     def __unicode__(self):
         return self.name
-
-
-
-
-
 
 class GroupNamespaceMap(models.Model):
     """
@@ -124,9 +113,6 @@ class UserAuthoringInfo(models.Model):
 
     def __unicode__(self):
         return "User: %s authors in %s" % (self.user,self.default_authoring_group_info.group)
-
-
-
 
 
 class AuthoredData(models.Model):
