@@ -30,6 +30,8 @@ from dingos_authoring.models import FILE_SYSTEM
 
 
 from dingos_authoring import DINGOS_AUTHORING_POSTPROCESSOR_TASK
+from dingos import DINGOS_EXPORT_VIEW_TOP_LEVEL_TYPES_THAT_TRIGGER_TRANSFER
+
 
 
 class DingosAuthoringImportCommand(DingoImportCommand):
@@ -114,11 +116,13 @@ class DingosAuthoringImportCommand(DingoImportCommand):
             xml_import_obj.yielded_iobjects.add(*created_objects)
 
             try:
-                top_level_iobject = InfoObject.objects.get(pk=created_object_ids[-1])
+                top_level_iobjects = InfoObject.objects.\
+                    filter(pk__in=created_object_ids).\
+                    filter(iobject_type__name__in=DINGOS_EXPORT_VIEW_TOP_LEVEL_TYPES_THAT_TRIGGER_TRANSFER)
             except:
-                top_level_iobject = None
+                top_level_iobjects = []
 
-            if top_level_iobject:
+            if len(top_level_iobjects)==1:
                 # We need to retrieve the object once more, because
                 # if we save now, we are going to overwrite the object
                 # that has been written directly after the scheduled
@@ -129,19 +133,21 @@ class DingosAuthoringImportCommand(DingoImportCommand):
 
                 xml_import_obj_reloaded = AuthoredData.objects.get(pk=xml_import_obj.pk)
 
-                xml_import_obj_reloaded.top_level_iobject = top_level_iobject
+                xml_import_obj_reloaded.top_level_iobject = top_level_iobjects[0]
 
                 xml_import_obj_reloaded.save()
 
-            if top_level_iobject:
+            if top_level_iobjects:
 
                 mod_name, func_name = DINGOS_AUTHORING_POSTPROCESSOR_TASK.rsplit('.',1)
                 mod = importlib.import_module(mod_name)
                 postprocessor_task = getattr(mod,func_name)
 
-                postprocessor_task(top_level_iobject,
-                                   import_jsn=None,
-                                   user=None,
-                                   action_comment='Import of XML via commandline')
+                for top_level_iobject in top_level_iobjects:
+
+                    postprocessor_task(top_level_iobject,
+                                       import_jsn=None,
+                                       user=None,
+                                       action_comment='Import of XML via commandline')
 
 
